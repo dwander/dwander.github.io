@@ -183,6 +183,8 @@
             border-radius: 6px;
             color: #6c757d;
             transition: all 0.2s;
+            min-width: 40px;
+            min-height: 40px;
         }
         
         .refresh-btn:hover {
@@ -246,9 +248,7 @@
                 </div>
                 <button 
                     @click="resetAll"
-                    @touchstart.stop
-                    @touchend.stop="resetAll"
-                    class="refresh-btn border-0"
+                    class="refresh-btn border-0 p-2"
                     title="전체 초기화"
                 >
                     <svg class="refresh-icon" viewBox="0 0 24 24">
@@ -284,8 +284,6 @@
                             class="bg-white border rounded-2 p-2 item-card item-clickable"
                             :class="{ 'item-completed': item.completed }"
                             @click="toggleComplete(item)"
-                            @touchstart="handleTouchStart"
-                            @touchend="handleTouchEnd(item, $event)"
                         >
                             <div class="d-flex align-items-center">
                                 <!-- 체크박스 -->
@@ -304,8 +302,6 @@
                                     <div 
                                         class="text-editable" 
                                         @click.stop="startEdit(item)"
-                                        @touchstart.stop
-                                        @touchend.stop="handleTextEdit(item)"
                                     >
                                         <div class="item-title">{{ item.text }}</div>
                                         <div v-if="item.description" class="item-description">{{ item.description }}</div>
@@ -315,9 +311,7 @@
                                 <!-- 삭제 버튼 -->
                                 <button 
                                     @click.stop="removeItem(item.id)"
-                                    @touchstart.stop
-                                    @touchend.stop="handleDelete(item.id)"
-                                    class="btn btn-link text-muted p-1 border-0"
+                                    class="btn btn-link text-muted p-2 border-0"
                                     title="삭제"
                                 >
                                     <svg class="delete-icon" viewBox="0 0 24 24">
@@ -390,8 +384,6 @@
             <!-- 플로팅 추가 버튼 -->
             <button 
                 @click="showAddInput"
-                @touchstart.stop
-                @touchend.stop="showAddInput"
                 class="floating-btn btn btn-primary d-flex align-items-center justify-content-center"
                 title="새 항목 추가"
             >
@@ -413,7 +405,6 @@
                     modalMode: 'add', // 'add' or 'edit'
                     modalData: { text: '', description: '' },
                     editingItem: null,
-                    touchStartTime: 0,
                     sortableInstance: null,
                     photoList: [
                         { id: 1, text: '신랑신부 포즈컷', description: '메인 포즈샷, 다양한 각도', completed: false },
@@ -489,38 +480,6 @@
                 },
                 toggleComplete(item) {
                     item.completed = !item.completed;
-                },
-                handleTouchStart() {
-                    this.touchStartTime = Date.now();
-                },
-                handleTouchEnd(item, event) {
-                    const touchDuration = Date.now() - this.touchStartTime;
-                    
-                    // 길게 누르기 감지 (드래그를 위한 긴 터치)
-                    if (touchDuration > 200) {
-                        return; // 드래그로 간주하여 체크 동작 안함
-                    }
-                    
-                    // 텍스트나 버튼 영역은 각각의 이벤트 처리
-                    if (event.target.closest('.text-editable') || event.target.closest('.btn')) {
-                        return;
-                    }
-                    
-                    event.preventDefault();
-                    this.toggleComplete(item);
-                },
-                handleTextEdit(item) {
-                    this.startEdit(item);
-                },
-                handleDelete(id) {
-                    this.removeItem(id);
-                },
-                handleTouch(item, event) {
-                    // 터치 이벤트에서 체크박스 토글
-                    if (event.target.closest('.text-editable') || event.target.closest('.btn')) {
-                        return; // 텍스트나 버튼 영역은 각각의 이벤트 처리
-                    }
-                    this.toggleComplete(item);
                 },
                 removeItem(id) {
                     this.photoList = this.photoList.filter(item => item.id !== id);
