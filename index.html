@@ -76,6 +76,7 @@
         .item-card {
             cursor: move;
             transition: all 0.2s;
+            touch-action: manipulation;
         }
         
         .item-card:hover {
@@ -89,9 +90,10 @@
         .text-editable {
             cursor: pointer;
             transition: color 0.2s;
-            padding: 4px 8px;
+            padding: 8px 12px;
             border-radius: 4px;
             display: inline-block;
+            min-height: 20px;
         }
         
         .text-editable:hover {
@@ -227,6 +229,7 @@
                         class="flex-fill bg-white border rounded-3 p-3 item-card item-clickable"
                         :class="{ 'item-completed': item.completed }"
                         @click="toggleComplete(item)"
+                        @touchend.prevent="handleTouch(item, $event)"
                     >
                         <div class="d-flex align-items-center">
                             <!-- 체크박스 -->
@@ -245,6 +248,7 @@
                                 <div 
                                     class="text-editable" 
                                     @click.stop="startEdit(item)"
+                                    @touchend.stop="startEdit(item)"
                                 >
                                     <div class="item-title">{{ item.text }}</div>
                                     <div v-if="item.description" class="item-description">{{ item.description }}</div>
@@ -423,6 +427,13 @@
                 toggleComplete(item) {
                     item.completed = !item.completed;
                 },
+                handleTouch(item, event) {
+                    // 터치 이벤트에서 체크박스 토글
+                    if (event.target.closest('.text-editable') || event.target.closest('.btn')) {
+                        return; // 텍스트나 버튼 영역은 각각의 이벤트 처리
+                    }
+                    this.toggleComplete(item);
+                },
                 removeItem(id) {
                     this.photoList = this.photoList.filter(item => item.id !== id);
                 },
@@ -441,7 +452,16 @@
                         this.sortableInstance = new Sortable(el, {
                             animation: 150,
                             ghostClass: 'sortable-ghost',
+                            forceFallback: true,
+                            fallbackTolerance: 3,
+                            touchStartThreshold: 10,
+                            delay: 100,
+                            delayOnTouchStart: true,
+                            onStart: function() {
+                                document.body.style.overflow = 'hidden';
+                            },
                             onEnd: (evt) => {
+                                document.body.style.overflow = '';
                                 const item = this.photoList.splice(evt.oldIndex, 1)[0];
                                 this.photoList.splice(evt.newIndex, 0, item);
                             }
