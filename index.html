@@ -171,15 +171,33 @@
         .content-wrapper {
             max-width: 768px;
             margin: 0 auto;
-            padding: 2rem 1rem;
+            padding: 1rem 1rem;
         }
         
         .list-item {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
         
         .list-bottom-spacing {
-            margin-bottom: 5rem;
+            margin-bottom: 4rem;
+        }
+        
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 0.5rem 1rem;
+            }
+            
+            .list-item {
+                margin-bottom: 0.2rem;
+            }
+            
+            .list-bottom-spacing {
+                margin-bottom: 3rem;
+            }
+            
+            .item-card {
+                padding: 0.75rem !important;
+            }
         }
     </style>
 </head>
@@ -187,10 +205,10 @@
     <div id="app">
         <div class="content-wrapper">
             <!-- 헤더 -->
-            <div class="d-flex justify-content-between align-items-start mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h1 class="h2 fw-semibold text-dark mb-2">촬영 체크리스트</h1>
-                    <p class="text-muted mb-0">드래그해서 순서 변경 · 텍스트 클릭해서 수정</p>
+                    <h1 class="h2 fw-semibold text-dark mb-1">촬영 체크리스트</h1>
+                    <p class="text-muted mb-0 small">드래그해서 순서 변경 · 텍스트 클릭해서 수정</p>
                 </div>
                 <button 
                     @click="resetAll"
@@ -206,9 +224,9 @@
             </div>
 
             <!-- 빈 상태 -->
-            <div v-if="photoList.length === 0" class="text-center py-5 text-muted list-bottom-spacing">
-                <div style="font-size: 4rem;" class="mb-3">📋</div>
-                <p>체크리스트가 비어있습니다</p>
+            <div v-if="photoList.length === 0" class="text-center py-4 text-muted list-bottom-spacing">
+                <div style="font-size: 3rem;" class="mb-2">📋</div>
+                <p class="mb-0">체크리스트가 비어있습니다</p>
             </div>
 
             <!-- 체크리스트 -->
