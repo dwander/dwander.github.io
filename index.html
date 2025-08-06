@@ -421,12 +421,21 @@
                     nextId: 11
                 }
             },
+            watch: {
+                photoList: {
+                    handler() {
+                        this.saveToStorage();
+                    },
+                    deep: true
+                }
+            },
             computed: {
                 modalTitle() {
                     return this.modalMode === 'add' ? '새 촬영 항목 추가' : '촬영 항목 수정';
                 }
             },
             mounted() {
+                this.loadFromStorage();
                 this.initSortable();
             },
             methods: {
@@ -488,6 +497,41 @@
                     this.photoList.forEach(item => {
                         item.completed = false;
                     });
+                },
+                saveToStorage() {
+                    try {
+                        const data = {
+                            photoList: this.photoList,
+                            nextId: this.nextId,
+                            lastSaved: new Date().toISOString()
+                        };
+                        localStorage.setItem('wedding-checklist', JSON.stringify(data));
+                    } catch (error) {
+                        console.warn('로컬스토리지 저장 실패:', error);
+                    }
+                },
+                loadFromStorage() {
+                    try {
+                        const saved = localStorage.getItem('wedding-checklist');
+                        if (saved) {
+                            const data = JSON.parse(saved);
+                            if (data.photoList && Array.isArray(data.photoList)) {
+                                this.photoList = data.photoList;
+                                this.nextId = data.nextId || this.nextId;
+                                console.log('데이터 복원 완료:', data.lastSaved);
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('로컬스토리지 로드 실패:', error);
+                    }
+                },
+                clearStorage() {
+                    try {
+                        localStorage.removeItem('wedding-checklist');
+                        console.log('저장된 데이터 삭제됨');
+                    } catch (error) {
+                        console.warn('로컬스토리지 삭제 실패:', error);
+                    }
                 },
                 initSortable() {
                     const el = this.$refs.photoListEl;
