@@ -73,10 +73,32 @@
             height: 20px;
         }
         
+        .item-wrapper {
+            position: relative;
+            margin-left: 12px;
+        }
+        
         .item-card {
             cursor: move;
             transition: all 0.2s;
             touch-action: manipulation;
+        }
+        
+        .item-number-badge {
+            position: absolute;
+            top: 8px;
+            left: -12px;
+            background: #495057;
+            color: white;
+            width: 24px;
+            height: 24px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            z-index: 10;
         }
         
         .item-card:hover {
@@ -90,10 +112,10 @@
         .text-editable {
             cursor: pointer;
             transition: color 0.2s;
-            padding: 8px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
             display: inline-block;
-            min-height: 20px;
+            min-height: 16px;
         }
         
         .text-editable:hover {
@@ -102,15 +124,15 @@
         }
         
         .item-title {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 500;
-            line-height: 1.3;
+            line-height: 1.2;
         }
         
         .item-description {
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             color: #6c757d;
-            margin-top: 2px;
+            margin-top: 1px;
         }
         
         .item-clickable {
@@ -171,32 +193,44 @@
         .content-wrapper {
             max-width: 768px;
             margin: 0 auto;
-            padding: 1rem 1rem;
+            padding: 0.5rem 0.75rem;
         }
         
         .list-item {
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.125rem;
         }
         
         .list-bottom-spacing {
-            margin-bottom: 4rem;
+            margin-bottom: 2.5rem;
+        }
+        
+        .header-section {
+            margin-bottom: 1rem;
         }
         
         @media (max-width: 768px) {
             .content-wrapper {
-                padding: 0.5rem 1rem;
+                padding: 0.25rem 0.5rem;
             }
             
             .list-item {
-                margin-bottom: 0.2rem;
+                margin-bottom: 0.1rem;
             }
             
             .list-bottom-spacing {
-                margin-bottom: 3rem;
+                margin-bottom: 2rem;
             }
             
             .item-card {
-                padding: 0.75rem !important;
+                padding: 0.5rem !important;
+            }
+            
+            .header-section {
+                margin-bottom: 0.75rem;
+            }
+            
+            .item-number {
+                font-size: 1rem;
             }
         }
     </style>
@@ -205,10 +239,10 @@
     <div id="app">
         <div class="content-wrapper">
             <!-- 헤더 -->
-            <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex justify-content-between align-items-start header-section">
                 <div>
-                    <h1 class="h2 fw-semibold text-dark mb-1">촬영 체크리스트</h1>
-                    <p class="text-muted mb-0 small">드래그해서 순서 변경 · 텍스트 클릭해서 수정</p>
+                    <h1 class="h3 fw-semibold text-dark mb-0">촬영 체크리스트</h1>
+                    <p class="text-muted mb-0" style="font-size: 0.8rem;">드래그해서 순서 변경 · 텍스트 클릭해서 수정</p>
                 </div>
                 <button 
                     @click="resetAll"
@@ -224,9 +258,9 @@
             </div>
 
             <!-- 빈 상태 -->
-            <div v-if="photoList.length === 0" class="text-center py-4 text-muted list-bottom-spacing">
-                <div style="font-size: 3rem;" class="mb-2">📋</div>
-                <p class="mb-0">체크리스트가 비어있습니다</p>
+            <div v-if="photoList.length === 0" class="text-center py-2 text-muted list-bottom-spacing">
+                <div style="font-size: 2.5rem;" class="mb-1">📋</div>
+                <p class="mb-0" style="font-size: 0.9rem;">체크리스트가 비어있습니다</p>
             </div>
 
             <!-- 체크리스트 -->
@@ -234,56 +268,58 @@
                 <li 
                     v-for="(item, index) in photoList" 
                     :key="item.id"
-                    class="d-flex align-items-center list-item no-select"
+                    class="list-item no-select"
                     :data-id="item.id"
                 >
-                    <!-- 번호 -->
-                    <div class="item-number me-4">
-                        <span>{{ index + 1 }}</span>
-                    </div>
-
-                    <!-- 메인 콘텐츠 -->
-                    <div 
-                        class="flex-fill bg-white border rounded-3 p-3 item-card item-clickable"
-                        :class="{ 'item-completed': item.completed }"
-                        @click="toggleComplete(item)"
-                        @touchend.prevent="handleTouch(item, $event)"
-                    >
-                        <div class="d-flex align-items-center">
-                            <!-- 체크박스 -->
-                            <div class="me-4">
-                                <input 
-                                    type="checkbox" 
-                                    :checked="item.completed"
-                                    @click.stop
-                                    class="form-check-input"
-                                    style="width: 20px; height: 20px; pointer-events: none;"
-                                >
-                            </div>
-                            
-                            <!-- 텍스트 영역 -->
-                            <div class="flex-fill me-3">
-                                <div 
-                                    class="text-editable" 
-                                    @click.stop="startEdit(item)"
-                                    @touchend.stop="startEdit(item)"
-                                >
-                                    <div class="item-title">{{ item.text }}</div>
-                                    <div v-if="item.description" class="item-description">{{ item.description }}</div>
+                    <div class="item-wrapper">
+                        <!-- 번호 뱃지 -->
+                        <div class="item-number-badge">
+                            {{ index + 1 }}
+                        </div>
+                        
+                        <!-- 메인 콘텐츠 -->
+                        <div 
+                            class="bg-white border rounded-2 p-2 item-card item-clickable"
+                            :class="{ 'item-completed': item.completed }"
+                            @click="toggleComplete(item)"
+                            @touchend.prevent="handleTouch(item, $event)"
+                        >
+                            <div class="d-flex align-items-center">
+                                <!-- 체크박스 -->
+                                <div class="me-3" style="margin-left: 8px;">
+                                    <input 
+                                        type="checkbox" 
+                                        :checked="item.completed"
+                                        @click.stop
+                                        class="form-check-input"
+                                        style="width: 18px; height: 18px; pointer-events: none;"
+                                    >
                                 </div>
-                            </div>
+                                
+                                <!-- 텍스트 영역 -->
+                                <div class="flex-fill me-3">
+                                    <div 
+                                        class="text-editable" 
+                                        @click.stop="startEdit(item)"
+                                        @touchend.stop="startEdit(item)"
+                                    >
+                                        <div class="item-title">{{ item.text }}</div>
+                                        <div v-if="item.description" class="item-description">{{ item.description }}</div>
+                                    </div>
+                                </div>
 
-                            <!-- 삭제 버튼 -->
-                            <button 
-                                @click.stop="removeItem(item.id)"
-                                class="btn btn-link text-muted p-1 border-0"
-                                title="삭제"
-                            >
-                                <svg class="delete-icon" viewBox="0 0 24 24">
-                                    <path d="m18 6-12 12"></path>
-                                    <path d="m6 6 12 12"></path>
-                                </svg>
-                            </button>
+                                <!-- 삭제 버튼 -->
+                                <button 
+                                    @click.stop="removeItem(item.id)"
+                                    class="btn btn-link text-muted p-1 border-0"
+                                    title="삭제"
+                                >
+                                    <svg class="delete-icon" viewBox="0 0 24 24">
+                                        <path d="m18 6-12 12"></path>
+                                        <path d="m6 6 12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </li>
