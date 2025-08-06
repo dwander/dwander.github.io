@@ -84,10 +84,35 @@
             touch-action: manipulation;
         }
         
+        .toggle-btn {
+            border: 1px solid #dee2e6;
+            background: white;
+            padding: 8px;
+            border-radius: 6px;
+            color: #6c757d;
+            transition: all 0.2s;
+            min-width: 40px;
+            min-height: 40px;
+            opacity: 0.5;
+        }
+        
+        .toggle-btn.active {
+            opacity: 1;
+        }
+        
+        .toggle-btn:hover {
+            background-color: #f8f9fa;
+            border-color: #ced4da;
+        }
+        
+        .number-icon {
+            width: 20px;
+            height: 16px;
+            position: relative;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
         .item-number-badge {
-            position: absolute;
-            top: 8px;
-            left: -12px;
             background: #495057;
             color: white;
             width: 24px;
@@ -99,6 +124,12 @@
             justify-content: center;
             border-radius: 4px;
             z-index: 10;
+            transition: opacity 0.3s;
+        }
+        
+        .item-number-badge.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
         
         .item-card:hover {
@@ -246,17 +277,29 @@
                     <h1 class="h3 fw-semibold text-dark mb-0">촬영 체크리스트</h1>
                     <p class="text-muted mb-0" style="font-size: 0.8rem;">드래그해서 순서 변경 · 텍스트 클릭해서 수정</p>
                 </div>
-                <button 
-                    @click="resetAll"
-                    class="refresh-btn border-0 p-2"
-                    title="전체 초기화"
-                >
-                    <svg class="refresh-icon" viewBox="0 0 24 24">
-                        <polyline points="23 4 23 10 17 10"></polyline>
-                        <polyline points="1 20 1 14 7 14"></polyline>
-                        <path d="m20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                    </svg>
-                </button>
+                <div class="d-flex gap-2">
+                    <button 
+                        @click="toggleNumbers"
+                        class="toggle-btn border-0 p-2"
+                        :class="{ active: showNumbers }"
+                        title="숫자 표시 토글"
+                    >
+                        <svg class="number-icon" viewBox="0 0 24 16" fill="none">
+                            <text x="12" y="12" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">123</text>
+                        </svg>
+                    </button>
+                    <button 
+                        @click="resetAll"
+                        class="refresh-btn border-0 p-2"
+                        title="전체 초기화"
+                    >
+                        <svg class="refresh-icon" viewBox="0 0 24 24">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="m20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- 빈 상태 -->
@@ -275,7 +318,11 @@
                 >
                     <div class="item-wrapper">
                         <!-- 번호 뱃지 -->
-                        <div class="item-number-badge">
+                        <div 
+                            class="item-number-badge"
+                            :class="{ hidden: !showNumbers }"
+                            style="position: absolute; top: 8px; left: -12px;"
+                        >
                             {{ index + 1 }}
                         </div>
                         
@@ -287,7 +334,7 @@
                         >
                             <div class="d-flex align-items-center">
                                 <!-- 체크박스 -->
-                                <div class="me-3" style="margin-left: 8px;">
+                                <div class="me-2" style="margin-left: 8px;">
                                     <input 
                                         type="checkbox" 
                                         :checked="item.completed"
@@ -405,6 +452,7 @@
                     modalMode: 'add', // 'add' or 'edit'
                     modalData: { text: '', description: '' },
                     editingItem: null,
+                    showNumbers: false,
                     sortableInstance: null,
                     photoList: [
                         { id: 1, text: '신랑신부 포즈컷', description: '메인 포즈샷, 다양한 각도', completed: false },
@@ -427,6 +475,9 @@
                         this.saveToStorage();
                     },
                     deep: true
+                },
+                showNumbers() {
+                    this.saveToStorage();
                 }
             },
             computed: {
@@ -490,6 +541,9 @@
                 toggleComplete(item) {
                     item.completed = !item.completed;
                 },
+                toggleNumbers() {
+                    this.showNumbers = !this.showNumbers;
+                },
                 removeItem(id) {
                     this.photoList = this.photoList.filter(item => item.id !== id);
                 },
@@ -503,6 +557,7 @@
                         const data = {
                             photoList: this.photoList,
                             nextId: this.nextId,
+                            showNumbers: this.showNumbers,
                             lastSaved: new Date().toISOString()
                         };
                         localStorage.setItem('wedding-checklist', JSON.stringify(data));
@@ -518,6 +573,7 @@
                             if (data.photoList && Array.isArray(data.photoList)) {
                                 this.photoList = data.photoList;
                                 this.nextId = data.nextId || this.nextId;
+                                this.showNumbers = data.showNumbers !== undefined ? data.showNumbers : false;
                                 console.log('데이터 복원 완료:', data.lastSaved);
                             }
                         }
