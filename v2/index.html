@@ -13,41 +13,108 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Google Material Symbols - 최적화된 방식 -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
     
     <style>
-        .material-symbols-outlined {
-            font-family: 'Material Symbols Outlined';
-            font-weight: normal;
-            font-style: normal;
-            font-size: 24px;
-            display: inline-block;
-            line-height: 1;
-            text-transform: none;
-            letter-spacing: normal;
-            word-wrap: normal;
-            white-space: nowrap;
-            direction: ltr;
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow-x: hidden;
         }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             transition: all 0.3s ease;
+            background-color: #f8f9fa;
         }
         
         .app-container {
             min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
         }
         
-        .checklist-item {
-            cursor: pointer;
+        /* 탭 네비게이션 영역 */
+        .tab-navigation {
+            padding-top: 20px;
+            padding-bottom: 0;
+            background-color: #e9ecef;
+            position: relative;
+        }
+        
+        /* 탭 하단 가로선 */
+        .tab-navigation::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: #dee2e6;
+        }
+        
+        .nav-tabs {
+            border-bottom: none;
+            justify-content: flex-start;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            background: transparent;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+            margin-right: 2px;
             transition: all 0.2s ease;
+            position: relative;
         }
         
-        .checklist-item:hover {
-            background-color: var(--bs-light);
+        .nav-tabs .nav-link:hover {
+            border: none;
+            color: #495057;
+            background: rgba(255,255,255,0.3);
         }
+        
+        .nav-tabs .nav-link.active {
+            border: none;
+            background: #f8f9fa;
+            color: #007bff;
+            font-weight: 600;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* 활성 탭 아래 가로선 제거 */
+        .nav-tabs .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #f8f9fa;
+        }
+        
+        /* 메인 콘텐츠 영역 */
+        .main-content {
+            margin-top: 20px;
+        }
+        
+.checklist-item {
+    border: 1px solid #dee2e6;      /* 테두리 */
+    border-radius: 12px;            /* 둥근 모서리 */
+    margin-bottom: 12px;            /* 카드 간 여백 */
+    background: white;              /* 흰 배경 */
+    box-shadow: 8px rgba(0,0,0,0.06);  /* 그림자 */
+}        
+.checklist-item:hover {
+    transform: translateY(-2px);    /* 살짝 떠오름 */
+    box-shadow: 8px rgba(0,0,0,0.52);  /* 더 강한 그림자 */
+}   
         
         .action-buttons {
             position: fixed;
@@ -117,7 +184,7 @@
             background: var(--bs-secondary-bg);
         }
         
-        .sidebar-handle .material-symbols-outlined {
+        .sidebar-handle .bi {
             color: var(--bs-text-muted);
             transform: rotate(90deg);
         }
@@ -130,86 +197,127 @@
         }
         
         /* 다크 테마 지원 */
+        [data-bs-theme="dark"] {
+            background-color: var(--bs-gray-900);
+        }
+        
+        [data-bs-theme="dark"] .app-container {
+            background-color: var(--bs-gray-900);
+        }
+        
+        [data-bs-theme="dark"] .tab-navigation {
+            background-color: var(--bs-gray-800);
+            border-bottom-color: var(--bs-gray-700);
+        }
+        
+        [data-bs-theme="dark"] .nav-tabs .nav-link {
+            color: var(--bs-gray-400);
+        }
+        
+        [data-bs-theme="dark"] .nav-tabs .nav-link:hover {
+            color: var(--bs-primary);
+            background: rgba(var(--bs-primary-rgb), 0.2);
+        }
+        
+        [data-bs-theme="dark"] .nav-tabs .nav-link.active {
+            background: var(--bs-gray-800);
+            color: var(--bs-primary);
+            border-bottom: 2px solid var(--bs-primary);
+        }
+        
+        [data-bs-theme="dark"] .main-content {
+            background-color: var(--bs-gray-900);
+        }
+        
         [data-bs-theme="dark"] .checklist-item:hover {
-            background-color: var(--bs-dark);
+            background-color: var(--bs-gray-800);
         }
     </style>
 </head>
 <body data-bs-theme="light">
     <div id="app" class="app-container">
         <!-- 메인 컨테이너 -->
-        <div class="container-fluid h-100">
+        <div class="h-100">
             <div class="row h-100">
                 <!-- 메인 영역 -->
-                <div class="col-12 col-lg-8">
+                <div class="col-12">
                     <!-- 탭 네비게이션 -->
-                    <div class="mt-3">
-                        <nav>
-                            <div class="nav nav-tabs d-flex justify-content-between align-items-center" role="tablist">
-                                <div class="d-flex">
-                                    <button 
-                                        v-for="(tab, index) in tabs" 
-                                        :key="index"
-                                        class="nav-link"
-                                        :class="{ active: currentTabIndex === index }"
-                                        @click="switchTab(index)"
-                                    >
-                                        {{ tab.name }}
-                                    </button>
-                                </div>
-                                
-                                <!-- 3점 메뉴 -->
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <span class="material-symbols-outlined">more_vert</span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <button class="dropdown-item d-flex align-items-center" @click="toggleTheme">
-                                                <span class="material-symbols-outlined me-2">
-                                                    {{ isDarkMode ? 'wb_sunny' : 'dark_mode' }}
-                                                </span>
-                                                {{ isDarkMode ? '라이트 모드' : '다크 모드' }}
-                                            </button>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <button class="dropdown-item d-flex align-items-center" @click="toggleSidebar">
-                                                <span class="material-symbols-outlined me-2">menu</span>
-                                                사이드바 열기
-                                            </button>
-                                        </li>
-                                    </ul>
+                    <div class="tab-navigation">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-12 col-md-10 col-lg-8">
+                                    <nav>
+                                        <div class="nav nav-tabs d-flex justify-content-between align-items-center" role="tablist">
+                                            <div class="d-flex">
+                                                <button 
+                                                    v-for="(tab, index) in tabs" 
+                                                    :key="index"
+                                                    class="nav-link"
+                                                    :class="{ active: currentTabIndex === index }"
+                                                    @click="switchTab(index)"
+                                                >
+                                                    {{ tab.name }}
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- 3점 메뉴 -->
+                                            <div class="dropdown">
+                                                <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: none;">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <button class="dropdown-item d-flex align-items-center" @click="toggleTheme">
+                                                            <i class="bi me-2" :class="isDarkMode ? 'bi-sun' : 'bi-moon'"></i>
+                                                            {{ isDarkMode ? '라이트 모드' : '다크 모드' }}
+                                                        </button>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button class="dropdown-item d-flex align-items-center" @click="toggleSidebar">
+                                                            <i class="bi bi-list me-2"></i>
+                                                            사이드바 열기
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </nav>
                                 </div>
                             </div>
-                        </nav>
+                        </div>
                     </div>
                     
-                    <!-- 체크리스트 영역 -->
-                    <div class="mt-4 pb-5">
-                        <div class="card">
-                            <div class="card-body">
-                                <div id="checklist-container">
-                                    <!-- 체크리스트 항목들이 여기에 렌더링됩니다 -->
-                                    <div 
-                                        v-for="item in currentTab.items" 
-                                        :key="item.id"
-                                        class="checklist-item d-flex align-items-center p-3 border-bottom"
-                                    >
-                                        <div class="form-check">
-                                            <input 
-                                                class="form-check-input" 
-                                                type="checkbox" 
-                                                :id="'check-' + item.id"
-                                                v-model="item.completed"
+                    <!-- 메인 콘텐츠 영역 -->
+                    <div class="container">
+                        <div class="row justify-content-center">
+                            <div class="col-12 col-md-10 col-lg-8">
+                                <div class="main-content">
+                                    <!-- 체크리스트 영역 -->
+                                    <div>
+                                        <div id="checklist-container">
+                                            <!-- 체크리스트 항목들이 여기에 렌더링됩니다 -->
+                                            <div 
+                                                v-for="item in currentTab.items" 
+                                                :key="item.id"
+                                                class="checklist-item d-flex align-items-center p-3"
                                             >
-                                            <label 
-                                                class="form-check-label ms-2" 
-                                                :for="'check-' + item.id"
-                                                :class="{ 'text-decoration-line-through text-muted': item.completed }"
-                                            >
-                                                {{ item.text }}
-                                            </label>
+                                                <div class="form-check">
+                                                    <input 
+                                                        class="form-check-input" 
+                                                        type="checkbox" 
+                                                        :id="'check-' + item.id"
+                                                        v-model="item.completed"
+                                                    >
+                                                    <label 
+                                                        class="form-check-label ms-2" 
+                                                        :for="'check-' + item.id"
+                                                        :class="{ 'text-muted': item.completed }"
+                                                    >
+                                                        {{ item.text }}
+                                                    </label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -223,7 +331,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">보관함</h5>
                         <button class="btn btn-sm btn-outline-secondary" @click="toggleSidebar">
-                            <span class="material-symbols-outlined">close</span>
+                            <i class="bi bi-x"></i>
                         </button>
                     </div>
                     <p class="text-muted small">향후 추가될 기능입니다.</p>
@@ -231,7 +339,7 @@
                 
                 <!-- 사이드바 핸들 (별도) -->
                 <div class="sidebar-handle" :class="{ hide: showSidebar }" @click="toggleSidebar">
-                    <span class="material-symbols-outlined">drag_indicator</span>
+                    <i class="bi bi-grip-horizontal"></i>
                 </div>
             </div>
         </div>
@@ -240,15 +348,15 @@
         <div class="action-buttons">
             <!-- 완료된 항목 체크 -->
             <button class="btn btn-success btn-circle" title="완료 항목 정리">
-                <span class="material-symbols-outlined">check_circle</span>
+                <i class="bi bi-check-circle"></i>
             </button>
             <!-- 새 항목 추가 -->
             <button class="btn btn-primary btn-circle" title="새 항목 추가" @click="addNewItem">
-                <span class="material-symbols-outlined">add</span>
+                <i class="bi bi-plus"></i>
             </button>
             <!-- 삭제 -->
             <button class="btn btn-secondary btn-circle" title="선택 항목 삭제">
-                <span class="material-symbols-outlined">delete</span>
+                <i class="bi bi-trash"></i>
             </button>
         </div>
     </div>
