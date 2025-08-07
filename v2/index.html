@@ -1,0 +1,339 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>체크리스트 앱</title>
+    
+    <!-- PWA 메타 태그 -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Material Symbols - 최적화된 방식 -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    
+    <style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s ease;
+        }
+        
+        .app-container {
+            min-height: 100vh;
+        }
+        
+        .checklist-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .checklist-item:hover {
+            background-color: var(--bs-light);
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .btn-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease;
+        }
+        
+        .btn-circle:hover {
+            transform: scale(1.1);
+        }
+        
+        .sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 250px;
+            background: var(--bs-body-bg);
+            border-left: 1px solid var(--bs-border-color);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 999;
+            padding: 20px;
+        }
+        
+        .sidebar.show {
+            transform: translateX(0);
+        }
+        
+        .sidebar-handle {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 80px;
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .sidebar-handle:hover {
+            background: var(--bs-secondary-bg);
+        }
+        
+        .sidebar-handle .material-symbols-outlined {
+            color: var(--bs-text-muted);
+            transform: rotate(90deg);
+        }
+        
+        /* 사이드바가 열려있을 때 핸들 숨기기 */
+        .sidebar-handle.hide {
+            transform: translateY(-50%) translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* 다크 테마 지원 */
+        [data-bs-theme="dark"] .checklist-item:hover {
+            background-color: var(--bs-dark);
+        }
+    </style>
+</head>
+<body data-bs-theme="light">
+    <div id="app" class="app-container">
+        <!-- 메인 컨테이너 -->
+        <div class="container-fluid h-100">
+            <div class="row h-100">
+                <!-- 메인 영역 -->
+                <div class="col-12 col-lg-8">
+                    <!-- 탭 네비게이션 -->
+                    <div class="mt-3">
+                        <nav>
+                            <div class="nav nav-tabs d-flex justify-content-between align-items-center" role="tablist">
+                                <div class="d-flex">
+                                    <button 
+                                        v-for="(tab, index) in tabs" 
+                                        :key="index"
+                                        class="nav-link"
+                                        :class="{ active: currentTabIndex === index }"
+                                        @click="switchTab(index)"
+                                    >
+                                        {{ tab.name }}
+                                    </button>
+                                </div>
+                                
+                                <!-- 3점 메뉴 -->
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="material-symbols-outlined">more_vert</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <button class="dropdown-item d-flex align-items-center" @click="toggleTheme">
+                                                <span class="material-symbols-outlined me-2">
+                                                    {{ isDarkMode ? 'wb_sunny' : 'dark_mode' }}
+                                                </span>
+                                                {{ isDarkMode ? '라이트 모드' : '다크 모드' }}
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item d-flex align-items-center" @click="toggleSidebar">
+                                                <span class="material-symbols-outlined me-2">menu</span>
+                                                사이드바 열기
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </nav>
+                    </div>
+                    
+                    <!-- 체크리스트 영역 -->
+                    <div class="mt-4 pb-5">
+                        <div class="card">
+                            <div class="card-body">
+                                <div id="checklist-container">
+                                    <!-- 체크리스트 항목들이 여기에 렌더링됩니다 -->
+                                    <div 
+                                        v-for="item in currentTab.items" 
+                                        :key="item.id"
+                                        class="checklist-item d-flex align-items-center p-3 border-bottom"
+                                    >
+                                        <div class="form-check">
+                                            <input 
+                                                class="form-check-input" 
+                                                type="checkbox" 
+                                                :id="'check-' + item.id"
+                                                v-model="item.completed"
+                                            >
+                                            <label 
+                                                class="form-check-label ms-2" 
+                                                :for="'check-' + item.id"
+                                                :class="{ 'text-decoration-line-through text-muted': item.completed }"
+                                            >
+                                                {{ item.text }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 사이드바 -->
+                <div class="sidebar" :class="{ show: showSidebar }">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">보관함</h5>
+                        <button class="btn btn-sm btn-outline-secondary" @click="toggleSidebar">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <p class="text-muted small">향후 추가될 기능입니다.</p>
+                </div>
+                
+                <!-- 사이드바 핸들 (별도) -->
+                <div class="sidebar-handle" :class="{ hide: showSidebar }" @click="toggleSidebar">
+                    <span class="material-symbols-outlined">drag_indicator</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 하단 액션 버튼들 -->
+        <div class="action-buttons">
+            <!-- 완료된 항목 체크 -->
+            <button class="btn btn-success btn-circle" title="완료 항목 정리">
+                <span class="material-symbols-outlined">check_circle</span>
+            </button>
+            <!-- 새 항목 추가 -->
+            <button class="btn btn-primary btn-circle" title="새 항목 추가" @click="addNewItem">
+                <span class="material-symbols-outlined">add</span>
+            </button>
+            <!-- 삭제 -->
+            <button class="btn btn-secondary btn-circle" title="선택 항목 삭제">
+                <span class="material-symbols-outlined">delete</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Vue.js 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const { createApp } = Vue;
+            
+            createApp({
+                data() {
+                    return {
+                        isDarkMode: false,
+                        showSidebar: false,
+                        currentTabIndex: 0,
+                        tabs: [
+                            {
+                                name: '촬영 체크리스트',
+                                items: [
+                                    { id: 1, text: '신랑신부 포즈컷', completed: false },
+                                    { id: 2, text: '신부 포즈컷', completed: true },
+                                    { id: 3, text: '신랑신부 정업', completed: true },
+                                    { id: 4, text: '양가 촌수', completed: false },
+                                    { id: 5, text: '가족 전체 전체', completed: false },
+                                    { id: 6, text: '신랑측 직계가족', completed: false },
+                                    { id: 7, text: '신부측 직계가족', completed: false },
+                                    { id: 8, text: '직장동료 우인', completed: false },
+                                    { id: 9, text: '부케 던지기', completed: true },
+                                    { id: 10, text: '플레시 컷', completed: false }
+                                ]
+                            },
+                            {
+                                name: '준비물 체크리스트',
+                                items: [
+                                    { id: 11, text: '카메라 배터리', completed: false },
+                                    { id: 12, text: 'SD 카드', completed: false },
+                                    { id: 13, text: '삼각대', completed: false }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                computed: {
+                    currentTab() {
+                        return this.tabs[this.currentTabIndex];
+                    }
+                },
+                methods: {
+                    toggleTheme() {
+                        this.isDarkMode = !this.isDarkMode;
+                        document.body.setAttribute('data-bs-theme', this.isDarkMode ? 'dark' : 'light');
+                        localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+                    },
+                    toggleSidebar() {
+                        this.showSidebar = !this.showSidebar;
+                    },
+                    switchTab(index) {
+                        this.currentTabIndex = index;
+                    },
+                    addNewItem() {
+                        const newId = Math.max(...this.currentTab.items.map(item => item.id)) + 1;
+                        const newText = prompt('새 항목을 입력하세요:');
+                        if (newText) {
+                            this.currentTab.items.push({
+                                id: newId,
+                                text: newText,
+                                completed: false
+                            });
+                        }
+                    }
+                },
+                mounted() {
+                    // 저장된 테마 불러오기
+                    const savedTheme = localStorage.getItem('theme');
+                    if (savedTheme) {
+                        this.isDarkMode = savedTheme === 'dark';
+                        document.body.setAttribute('data-bs-theme', savedTheme);
+                    }
+                }
+            }).mount('#app');
+        });
+    </script>
+</body>
+</html>
