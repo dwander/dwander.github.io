@@ -495,64 +495,152 @@
             pointer-events: none;
         }
         
-        .toggle-btn {
-            border: 1px solid #dee2e6;
-            background: white;
-            padding: 8px;
-            border-radius: 6px;
+
+        
+        .menu-btn {
+            background: transparent;
             color: #6c757d;
-            transition: all 0.2s;
+            transition: color 0.2s;
             min-width: 40px;
             min-height: 40px;
-            opacity: 0.5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        .toggle-btn.active {
-            opacity: 1;
+        .menu-btn:hover {
+            color: #495057;
         }
         
-        .toggle-btn:hover {
-            background-color: #f8f9fa;
-            border-color: #ced4da;
-        }
-        
-        .lock-btn {
-            border: 1px solid #dee2e6;
-            background: white;
-            padding: 8px;
-            border-radius: 6px;
-            color: #6c757d;
-            transition: all 0.2s;
-            min-width: 40px;
-            min-height: 40px;
-        }
-        
-        .lock-btn:hover {
-            background-color: #f8f9fa;
-            border-color: #ced4da;
-        }
-        
-        .number-icon {
+        .menu-icon {
             width: 20px;
-            height: 16px;
-            position: relative;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 20px;
         }
         
-        .refresh-btn {
-            border: 1px solid #dee2e6;
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            min-width: 200px;
             background: white;
-            padding: 8px;
+            border: 1px solid #dee2e6;
             border-radius: 6px;
-            color: #6c757d;
-            transition: all 0.2s;
-            min-width: 40px;
-            min-height: 40px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1060;
+            margin-top: 4px;
+            padding: 8px 0;
+            display: block;
         }
         
-        .refresh-btn:hover {
+        .dropdown-menu[style*="display: none"] {
+            display: none !important;
+        }
+        
+        .dropdown-item {
+            padding: 8px 16px;
+            color: #495057;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 0.9rem;
+            transition: background-color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .dropdown-item:hover {
             background-color: #f8f9fa;
-            border-color: #ced4da;
+        }
+        
+        .dropdown-item.disabled {
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .dropdown-item.disabled:hover {
+            background-color: transparent;
+        }
+        
+        .menu-item-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+        
+        .preset-modal {
+            position: fixed;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1050;
+            width: 500px;
+            max-width: calc(100vw - 2rem);
+        }
+        
+        .preset-slots {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .preset-slot {
+            aspect-ratio: 1;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #6c757d;
+        }
+        
+        .preset-slot:hover {
+            border-color: #0d6efd;
+            background: #e7f1ff;
+        }
+        
+        .preset-slot.active {
+            border-color: #0d6efd;
+            background: #0d6efd;
+            color: white;
+        }
+        
+        .preset-slot.has-data {
+            border-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .preset-slot.has-data.active {
+            background: #28a745;
+            color: white;
+        }
+        
+        .preset-slot-title {
+            font-size: 0.7rem;
+            margin-top: 4px;
+            text-align: center;
+            line-height: 1.1;
+        }
+        
+        .preset-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .preset-actions .btn {
+            font-size: 0.85rem;
         }
         
         .content-wrapper {
@@ -571,6 +659,7 @@
         
         .header-section {
             margin-bottom: 1rem;
+            overflow: visible;
         }
 
         .empty-state-icon {
@@ -621,7 +710,7 @@
     <div id="app">
         <div class="content-wrapper">
             <!-- 헤더 -->
-            <div class="d-flex justify-content-between align-items-start header-section">
+            <div class="d-flex justify-content-between align-items-start header-section" style="position: relative;">
                 <div>
                     <h1 
                         class="h3 fw-semibold text-dark mb-0 app-title"
@@ -641,39 +730,58 @@
                         style="margin-left: 0.5rem;"
                     >
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2" style="position: relative;">
                     <button 
-                        @click="toggleNumbers"
-                        class="toggle-btn border-0 p-2"
-                        :class="{ active: showNumbers }"
-                        title="숫자 표시 토글"
+                        @click="toggleMenu"
+                        class="menu-btn border-0 p-2"
+                        title="메뉴"
+                        ref="menuButton"
                     >
-                        <svg class="number-icon" viewBox="0 0 24 16" fill="none">
-                            <text x="12" y="12" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">123</text>
+                        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="12" cy="5" r="1"></circle>
+                            <circle cx="12" cy="19" r="1"></circle>
                         </svg>
                     </button>
-                    <button 
-                        @click="toggleUILock"
-                        class="lock-btn border-0 p-2"
-                        title="UI 잠금 토글"
-                    >
-                        <svg class="lock-icon" viewBox="0 0 24 24">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <circle v-if="!uiLocked" cx="12" cy="7" r="4"></circle>
-                            <path v-else d="m7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                    </button>
-                    <button 
-                        @click="resetAll"
-                        class="refresh-btn border-0 p-2"
-                        title="전체 초기화"
-                    >
-                        <svg class="refresh-icon" viewBox="0 0 24 24">
-                            <polyline points="23 4 23 10 17 10"></polyline>
-                            <polyline points="1 20 1 14 7 14"></polyline>
-                            <path d="m20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                        </svg>
-                    </button>
+                    
+                    <!-- 드롭다운 메뉴 -->
+                    <div v-show="showMenu" class="dropdown-menu" @click.stop>
+                        <button class="dropdown-item" @click="toggleNumbers">
+                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                            {{ showNumbers ? '번호 숨기기' : '번호 표시' }}
+                        </button>
+                        <button class="dropdown-item" @click="toggleUILock">
+                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <circle v-if="!uiLocked" cx="12" cy="7" r="4"></circle>
+                                <path v-else d="m7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            {{ uiLocked ? 'UI 잠금 해제' : 'UI 잠금' }}
+                        </button>
+                        <button class="dropdown-item" @click="resetAll">
+                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="m20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                            체크리스트 초기화
+                        </button>
+                        <hr class="my-1">
+                        <button class="dropdown-item" @click="openPresetModal">
+                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="m12 1 3 6 6 3-6 3-3 6-3-6-6-3 6-3 3-6Z"></path>
+                            </svg>
+                            프리셋 관리
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -799,7 +907,7 @@
 
             <!-- 모달 배경 -->
             <div 
-                v-if="showModal || showTrashModal || showDescriptionModal || showStorageModal" 
+                v-if="showModal || showTrashModal || showDescriptionModal || showStorageModal || showPresetModal" 
                 class="modal-backdrop-custom"
                 @click="closeAllModals"
             ></div>
@@ -959,6 +1067,71 @@
                 </div>
             </div>
 
+            <!-- 프리셋 관리 모달 -->
+            <div v-if="showPresetModal" class="preset-modal">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">프리셋 관리</h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- 프리셋 슬롯들 -->
+                        <div class="preset-slots">
+                            <div 
+                                v-for="slot in 5" 
+                                :key="slot"
+                                class="preset-slot"
+                                :class="{ 
+                                    active: selectedPresetSlot === slot,
+                                    'has-data': presets[slot] 
+                                }"
+                                @click="selectPresetSlot(slot)"
+                            >
+                                <div>{{ slot }}</div>
+                                <div class="preset-slot-title" v-if="presets[slot]">
+                                    {{ presets[slot].title }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 프리셋 액션 버튼들 -->
+                        <div class="preset-actions">
+                            <button 
+                                class="btn btn-primary btn-sm"
+                                :disabled="!selectedPresetSlot"
+                                @click="savePreset"
+                            >
+                                현재 상태를 프리셋으로 저장
+                            </button>
+                            <button 
+                                class="btn btn-success btn-sm"
+                                :disabled="!selectedPresetSlot || !presets[selectedPresetSlot]"
+                                @click="loadPreset"
+                            >
+                                프리셋 불러오기
+                            </button>
+                            <button 
+                                class="btn btn-warning btn-sm"
+                                :disabled="!selectedPresetSlot || !presets[selectedPresetSlot]"
+                                @click="clearPreset"
+                            >
+                                프리셋 비우기
+                            </button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button 
+                                @click="closePresetModal"
+                                class="btn btn-secondary"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 특이사항 팝업 -->
             <div v-if="showDescriptionModal" class="description-popup">
                 <div class="card shadow">
@@ -1036,6 +1209,8 @@
                     showTrashModal: false,
                     showDescriptionModal: false,
                     showStorageModal: false,
+                    showPresetModal: false,
+                    showMenu: false,
                     modalMode: 'add', // 'add' or 'edit'
                     modalData: { text: '', description: '' },
                     editingItem: null,
@@ -1044,6 +1219,8 @@
                     uiLocked: false,
                     trashItems: [], // 삭제된 항목들
                     storageItems: [], // 보관된 항목들
+                    presets: {}, // 프리셋 저장소
+                    selectedPresetSlot: null, // 선택된 프리셋 슬롯
                     sortableInstance: null,
                     activeActions: null,
                     actionTimeout: null,
@@ -1096,7 +1273,11 @@
             },
             mounted() {
                 this.loadFromStorage();
+                this.loadPresets();
                 this.initSortable();
+                
+                // 메뉴 외부 클릭 시 닫기
+                document.addEventListener('click', this.handleOutsideClick);
             },
             methods: {
                 showAddInput() {
@@ -1154,6 +1335,7 @@
                 },
                 toggleNumbers() {
                     this.showNumbers = !this.showNumbers;
+                    this.showMenu = false;
                 },
                 toggleUILock() {
                     this.uiLocked = !this.uiLocked;
@@ -1162,6 +1344,7 @@
                     } else if (this.sortableInstance) {
                         this.sortableInstance.option('disabled', false);
                     }
+                    this.showMenu = false;
                 },
                 showItemActions(itemId) {
                     if (this.uiLocked) return;
@@ -1358,7 +1541,93 @@
                     this.showTrashModal = false;
                     this.showDescriptionModal = false;
                     this.showStorageModal = false;
+                    this.showPresetModal = false;
+                    this.showMenu = false;
                     this.selectedItem = null;
+                    this.selectedPresetSlot = null;
+                },
+                toggleMenu() {
+                    this.showMenu = !this.showMenu;
+                },
+                handleOutsideClick(event) {
+                    if (this.showMenu) {
+                        const menuButton = this.$refs.menuButton;
+                        const dropdownMenu = document.querySelector('.dropdown-menu');
+                        
+                        if (menuButton && !menuButton.contains(event.target) && 
+                            dropdownMenu && !dropdownMenu.contains(event.target)) {
+                            this.showMenu = false;
+                        }
+                    }
+                },
+                openPresetModal() {
+                    this.showPresetModal = true;
+                    this.showMenu = false;
+                },
+                closePresetModal() {
+                    this.showPresetModal = false;
+                    this.selectedPresetSlot = null;
+                },
+                selectPresetSlot(slot) {
+                    this.selectedPresetSlot = slot;
+                },
+                savePreset() {
+                    if (!this.selectedPresetSlot) return;
+                    
+                    const presetData = {
+                        title: this.appTitle,
+                        photoList: JSON.parse(JSON.stringify(this.photoList)),
+                        trashItems: JSON.parse(JSON.stringify(this.trashItems)),
+                        storageItems: JSON.parse(JSON.stringify(this.storageItems)),
+                        nextId: this.nextId,
+                        showNumbers: this.showNumbers,
+                        savedAt: new Date().toISOString()
+                    };
+                    
+                    this.presets[this.selectedPresetSlot] = presetData;
+                    this.savePresets();
+                    alert(`프리셋 ${this.selectedPresetSlot}에 저장되었습니다.`);
+                },
+                loadPreset() {
+                    if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
+                    
+                    const preset = this.presets[this.selectedPresetSlot];
+                    this.appTitle = preset.title;
+                    this.photoList = JSON.parse(JSON.stringify(preset.photoList));
+                    this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
+                    this.storageItems = JSON.parse(JSON.stringify(preset.storageItems));
+                    this.nextId = preset.nextId;
+                    this.showNumbers = preset.showNumbers;
+                    
+                    this.closePresetModal();
+                    alert(`프리셋 ${this.selectedPresetSlot}을 불러왔습니다.`);
+                },
+                clearPreset() {
+                    if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
+                    
+                    if (confirm(`프리셋 ${this.selectedPresetSlot}을 삭제하시겠습니까?`)) {
+                        delete this.presets[this.selectedPresetSlot];
+                        this.savePresets();
+                        this.selectedPresetSlot = null;
+                        alert('프리셋이 삭제되었습니다.');
+                    }
+                },
+                savePresets() {
+                    try {
+                        localStorage.setItem('wedding-checklist-presets', JSON.stringify(this.presets));
+                    } catch (error) {
+                        console.warn('프리셋 저장 실패:', error);
+                    }
+                },
+                loadPresets() {
+                    try {
+                        const saved = localStorage.getItem('wedding-checklist-presets');
+                        if (saved) {
+                            this.presets = JSON.parse(saved);
+                        }
+                    } catch (error) {
+                        console.warn('프리셋 로드 실패:', error);
+                    }
                 },
                 restoreItem(trashItem) {
                     // 휴지통에서 제거
@@ -1390,6 +1659,7 @@
                     this.photoList.forEach(item => {
                         item.completed = false;
                     });
+                    this.showMenu = false;
                 },
                 startEditTitle() {
                     if (this.uiLocked) return;
@@ -1424,14 +1694,14 @@
                             showNumbers: this.showNumbers,
                             lastSaved: new Date().toISOString()
                         };
-                        localStorage.setItem('wedding-checklist', JSON.stringify(data));
+                        localStorage.setItem('wedding-checklist-current', JSON.stringify(data));
                     } catch (error) {
-                        console.warn('로컬스토리지 저장 실패:', error);
+                        console.warn('현재 상태 저장 실패:', error);
                     }
                 },
                 loadFromStorage() {
                     try {
-                        const saved = localStorage.getItem('wedding-checklist');
+                        const saved = localStorage.getItem('wedding-checklist-current');
                         if (saved) {
                             const data = JSON.parse(saved);
                             if (data.photoList && Array.isArray(data.photoList)) {
@@ -1441,11 +1711,11 @@
                                 this.storageItems = data.storageItems || [];
                                 this.nextId = data.nextId || this.nextId;
                                 this.showNumbers = data.showNumbers !== undefined ? data.showNumbers : false;
-                                console.log('데이터 복원 완료:', data.lastSaved);
+                                console.log('현재 상태 복원 완료:', data.lastSaved);
                             }
                         }
                     } catch (error) {
-                        console.warn('로컬스토리지 로드 실패:', error);
+                        console.warn('현재 상태 로드 실패:', error);
                     }
                 },
                 initSortable() {
@@ -1481,6 +1751,7 @@
                 }
                 this.clearActionTimeout();
                 this.clearHoverTimeout();
+                document.removeEventListener('click', this.handleOutsideClick);
             }
         }).mount('#app');
     </script>
