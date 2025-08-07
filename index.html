@@ -1575,6 +1575,7 @@
                 savePreset() {
                     if (!this.selectedPresetSlot) return;
                     
+                    const slotNumber = this.selectedPresetSlot; // 슬롯 번호 미리 저장
                     const presetData = {
                         title: this.appTitle,
                         photoList: JSON.parse(JSON.stringify(this.photoList)),
@@ -1587,11 +1588,12 @@
                     
                     this.presets[this.selectedPresetSlot] = presetData;
                     this.savePresets();
-                    alert(`프리셋 ${this.selectedPresetSlot}에 저장되었습니다.`);
+                    alert(`프리셋 ${slotNumber}에 저장되었습니다.`);
                 },
                 loadPreset() {
                     if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
                     
+                    const slotNumber = this.selectedPresetSlot; // 슬롯 번호 미리 저장
                     const preset = this.presets[this.selectedPresetSlot];
                     this.appTitle = preset.title;
                     this.photoList = JSON.parse(JSON.stringify(preset.photoList));
@@ -1601,12 +1603,13 @@
                     this.showNumbers = preset.showNumbers;
                     
                     this.closePresetModal();
-                    alert(`프리셋 ${this.selectedPresetSlot}을 불러왔습니다.`);
+                    alert(`프리셋 ${slotNumber}을 불러왔습니다.`);
                 },
                 clearPreset() {
                     if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
                     
-                    if (confirm(`프리셋 ${this.selectedPresetSlot}을 삭제하시겠습니까?`)) {
+                    const slotNumber = this.selectedPresetSlot; // 슬롯 번호 미리 저장
+                    if (confirm(`프리셋 ${slotNumber}을 삭제하시겠습니까?`)) {
                         delete this.presets[this.selectedPresetSlot];
                         this.savePresets();
                         this.selectedPresetSlot = null;
