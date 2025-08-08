@@ -1,447 +1,298 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>체크리스트 앱</title>
-    
-    <!-- PWA 메타 태그 -->
-    <meta name="theme-color" content="#007bff">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css">
-    
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow-x: hidden;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            transition: all 0.3s ease;
-            background-color: #f8f9fa;
-        }
-        
-        .app-container {
-            min-height: 100vh;
-            width: 100%;
-            overflow-x: hidden;
-        }
-        
-        /* 탭 네비게이션 영역 */
-        .tab-navigation {
-            padding-top: 20px;
-            padding-bottom: 0;
-            background-color: #e9ecef;
-            position: relative;
-        }
-        
-        /* 탭 하단 가로선 */
-        .tab-navigation::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background-color: #dee2e6;
-        }
-        
-        .nav-tabs {
-            border-bottom: none;
-            justify-content: flex-start;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .nav-tabs .nav-link {
-            border: none;
-            background: transparent;
-            color: #6c757d;
-            font-weight: 500;
-            padding: 12px 20px;
-            border-radius: 8px 8px 0 0;
-            margin-right: 2px;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-        
-        .nav-tabs .nav-link:hover {
-            border: none;
-            color: #495057;
-            background: rgba(255,255,255,0.3);
-        }
-        
-        .nav-tabs .nav-link.active {
-            border: none;
-            background: #f8f9fa;
-            color: #007bff;
-            font-weight: 600;
-            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
-        }
-        
-        /* 활성 탭 아래 가로선 제거 */
-        .nav-tabs .nav-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #f8f9fa;
-        }
-        
-        /* 메인 콘텐츠 영역 */
-        .main-content {
-            margin-top: 20px;
-        }
-        
-.checklist-item {
-    border: 1px solid #dee2e6;      /* 테두리 */
-    border-radius: 12px;            /* 둥근 모서리 */
-    margin-bottom: 12px;            /* 카드 간 여백 */
-    background: white;              /* 흰 배경 */
-    box-shadow: 8px rgba(0,0,0,0.06);  /* 그림자 */
-}        
-.checklist-item:hover {
-    transform: translateY(-2px);    /* 살짝 떠오름 */
-    box-shadow: 8px rgba(0,0,0,0.52);  /* 더 강한 그림자 */
-}   
-        
-        .action-buttons {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            z-index: 1000;
-        }
-        
-        .btn-circle {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: transform 0.2s ease;
-        }
-        
-        .btn-circle:hover {
-            transform: scale(1.1);
-        }
-        
-        .sidebar {
-            position: fixed;
-            right: 0;
-            top: 0;
-            height: 100vh;
-            width: 250px;
-            background: var(--bs-body-bg);
-            border-left: 1px solid var(--bs-border-color);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            z-index: 999;
-            padding: 20px;
-        }
-        
-        .sidebar.show {
-            transform: translateX(0);
-        }
-        
-        .sidebar-handle {
-            position: fixed;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 40px;
-            height: 80px;
-            background: var(--bs-body-bg);
-            border: 1px solid var(--bs-border-color);
-            border-right: none;
-            border-radius: 8px 0 0 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-        
-        .sidebar-handle:hover {
-            background: var(--bs-secondary-bg);
-        }
-        
-        .sidebar-handle .bi {
-            color: var(--bs-text-muted);
-            transform: rotate(90deg);
-        }
-        
-        /* 사이드바가 열려있을 때 핸들 숨기기 */
-        .sidebar-handle.hide {
-            transform: translateY(-50%) translateX(100%);
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        /* 다크 테마 지원 */
-        [data-bs-theme="dark"] {
-            background-color: var(--bs-gray-900);
-        }
-        
-        [data-bs-theme="dark"] .app-container {
-            background-color: var(--bs-gray-900);
-        }
-        
-        [data-bs-theme="dark"] .tab-navigation {
-            background-color: var(--bs-gray-800);
-            border-bottom-color: var(--bs-gray-700);
-        }
-        
-        [data-bs-theme="dark"] .nav-tabs .nav-link {
-            color: var(--bs-gray-400);
-        }
-        
-        [data-bs-theme="dark"] .nav-tabs .nav-link:hover {
-            color: var(--bs-primary);
-            background: rgba(var(--bs-primary-rgb), 0.2);
-        }
-        
-        [data-bs-theme="dark"] .nav-tabs .nav-link.active {
-            background: var(--bs-gray-800);
-            color: var(--bs-primary);
-            border-bottom: 2px solid var(--bs-primary);
-        }
-        
-        [data-bs-theme="dark"] .main-content {
-            background-color: var(--bs-gray-900);
-        }
-        
-        [data-bs-theme="dark"] .checklist-item:hover {
-            background-color: var(--bs-gray-800);
-        }
-    </style>
-</head>
-<body data-bs-theme="light">
-    <div id="app" class="app-container">
-        <!-- 메인 컨테이너 -->
-        <div class="h-100">
-            <div class="row h-100">
-                <!-- 메인 영역 -->
-                <div class="col-12">
-                    <!-- 탭 네비게이션 -->
-                    <div class="tab-navigation">
-                        <div class="container">
-                            <div class="row justify-content-center">
-                                <div class="col-12 col-md-10 col-lg-8">
-                                    <nav>
-                                        <div class="nav nav-tabs d-flex justify-content-between align-items-center" role="tablist">
-                                            <div class="d-flex">
-                                                <button 
-                                                    v-for="(tab, index) in tabs" 
-                                                    :key="index"
-                                                    class="nav-link"
-                                                    :class="{ active: currentTabIndex === index }"
-                                                    @click="switchTab(index)"
-                                                >
-                                                    {{ tab.name }}
-                                                </button>
-                                            </div>
-                                            
-                                            <!-- 3점 메뉴 -->
-                                            <div class="dropdown">
-                                                <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: none;">
-                                                    <i class="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li>
-                                                        <button class="dropdown-item d-flex align-items-center" @click="toggleTheme">
-                                                            <i class="bi me-2" :class="isDarkMode ? 'bi-sun' : 'bi-moon'"></i>
-                                                            {{ isDarkMode ? '라이트 모드' : '다크 모드' }}
-                                                        </button>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <button class="dropdown-item d-flex align-items-center" @click="toggleSidebar">
-                                                            <i class="bi bi-list me-2"></i>
-                                                            사이드바 열기
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </nav>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 메인 콘텐츠 영역 -->
-                    <div class="container">
-                        <div class="row justify-content-center">
-                            <div class="col-12 col-md-10 col-lg-8">
-                                <div class="main-content">
-                                    <!-- 체크리스트 영역 -->
-                                    <div>
-                                        <div id="checklist-container">
-                                            <!-- 체크리스트 항목들이 여기에 렌더링됩니다 -->
-                                            <div 
-                                                v-for="item in currentTab.items" 
-                                                :key="item.id"
-                                                class="checklist-item d-flex align-items-center p-3"
-                                            >
-                                                <div class="form-check">
-                                                    <input 
-                                                        class="form-check-input" 
-                                                        type="checkbox" 
-                                                        :id="'check-' + item.id"
-                                                        v-model="item.completed"
-                                                    >
-                                                    <label 
-                                                        class="form-check-label ms-2" 
-                                                        :for="'check-' + item.id"
-                                                        :class="{ 'text-muted': item.completed }"
-                                                    >
-                                                        {{ item.text }}
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 사이드바 -->
-                <div class="sidebar" :class="{ show: showSidebar }">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">보관함</h5>
-                        <button class="btn btn-sm btn-outline-secondary" @click="toggleSidebar">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                    <p class="text-muted small">향후 추가될 기능입니다.</p>
-                </div>
-                
-                <!-- 사이드바 핸들 (별도) -->
-                <div class="sidebar-handle" :class="{ hide: showSidebar }" @click="toggleSidebar">
-                    <i class="bi bi-grip-horizontal"></i>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 하단 액션 버튼들 -->
-        <div class="action-buttons">
-            <!-- 완료된 항목 체크 -->
-            <button class="btn btn-success btn-circle" title="완료 항목 정리">
-                <i class="bi bi-check-circle"></i>
-            </button>
-            <!-- 새 항목 추가 -->
-            <button class="btn btn-primary btn-circle" title="새 항목 추가" @click="addNewItem">
-                <i class="bi bi-plus"></i>
-            </button>
-            <!-- 삭제 -->
-            <button class="btn btn-secondary btn-circle" title="선택 항목 삭제">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
-    </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iOS 스타일 위로 넘기는 카드덱 - 스테이블1</title>
+<style>
+body {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* 중앙 정렬 제거, 상단 정렬로 변경 */
+  height: 100vh;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  padding-top: 90px; /* 상단 90px 고정 여백 */
+  box-sizing: border-box;
+}
 
-    <!-- Vue.js 3 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
-    <!-- Bootstrap JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const { createApp } = Vue;
-            
-            createApp({
-                data() {
-                    return {
-                        isDarkMode: false,
-                        showSidebar: false,
-                        currentTabIndex: 0,
-                        tabs: [
-                            {
-                                name: '촬영 체크리스트',
-                                items: [
-                                    { id: 1, text: '신랑신부 포즈컷', completed: false },
-                                    { id: 2, text: '신부 포즈컷', completed: true },
-                                    { id: 3, text: '신랑신부 정업', completed: true },
-                                    { id: 4, text: '양가 촌수', completed: false },
-                                    { id: 5, text: '가족 전체 전체', completed: false },
-                                    { id: 6, text: '신랑측 직계가족', completed: false },
-                                    { id: 7, text: '신부측 직계가족', completed: false },
-                                    { id: 8, text: '직장동료 우인', completed: false },
-                                    { id: 9, text: '부케 던지기', completed: true },
-                                    { id: 10, text: '플레시 컷', completed: false }
-                                ]
-                            },
-                            {
-                                name: '준비물 체크리스트',
-                                items: [
-                                    { id: 11, text: '카메라 배터리', completed: false },
-                                    { id: 12, text: 'SD 카드', completed: false },
-                                    { id: 13, text: '삼각대', completed: false }
-                                ]
-                            }
-                        ]
-                    }
-                },
-                computed: {
-                    currentTab() {
-                        return this.tabs[this.currentTabIndex];
-                    }
-                },
-                methods: {
-                    toggleTheme() {
-                        this.isDarkMode = !this.isDarkMode;
-                        document.body.setAttribute('data-bs-theme', this.isDarkMode ? 'dark' : 'light');
-                        localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
-                    },
-                    toggleSidebar() {
-                        this.showSidebar = !this.showSidebar;
-                    },
-                    switchTab(index) {
-                        this.currentTabIndex = index;
-                    },
-                    addNewItem() {
-                        const newId = Math.max(...this.currentTab.items.map(item => item.id)) + 1;
-                        const newText = prompt('새 항목을 입력하세요:');
-                        if (newText) {
-                            this.currentTab.items.push({
-                                id: newId,
-                                text: newText,
-                                completed: false
-                            });
-                        }
-                    }
-                },
-                mounted() {
-                    // 저장된 테마 불러오기
-                    const savedTheme = localStorage.getItem('theme');
-                    if (savedTheme) {
-                        this.isDarkMode = savedTheme === 'dark';
-                        document.body.setAttribute('data-bs-theme', savedTheme);
-                    }
-                }
-            }).mount('#app');
+.deck {
+  position: relative;
+  width: 700px;
+  height: 1000px;
+  perspective: 1200px;
+}
+
+.card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  background: #f8f9fa; /* 밝은 그레이톤으로 통일 */
+  box-shadow: 
+    0 15px 30px rgba(0,0,0,0.06),
+    0 10px 20px rgba(0,0,0,0.04),
+    0 3px 8px rgba(0,0,0,0.03);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2em;
+  font-weight: 600;
+  color: #333;
+  cursor: grab;
+  user-select: none;
+  transform-origin: center center;
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 
+    0 20px 40px rgba(0,0,0,0.08),
+    0 15px 25px rgba(0,0,0,0.06),
+    0 5px 12px rgba(0,0,0,0.04);
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+/* 📱 모바일 대응 개선 */
+@media (max-width: 768px) {
+  body {
+    padding-top: 70px; /* 모바일에서는 여백 조금 줄임 */
+  }
+  
+  .deck {
+    width: min(90vw, 400px);
+    height: calc(min(90vw, 400px) * 1.4);
+  }
+  .card {
+    font-size: 1.5em;
+  }
+}
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="card">1</div>
+  <div class="card">2</div>
+  <div class="card">3</div>
+  <div class="card">4</div>
+  <div class="card">5</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+<script>
+const deck = document.querySelector(".deck");
+let cards = Array.from(deck.querySelectorAll(".card"));
+let currentDraggable = null; // 현재 드래그 인스턴스 추적
+let animationId = null; // RAF ID 추적
+
+function layoutCards() {
+  cards.forEach((card, i) => {
+    gsap.set(card, {
+      zIndex: cards.length - i,
+      scale: 1 - i * 0.05,
+      y: i * 80,
+      opacity: i < 4 ? 1 : 0,
+      x: 0
+    });
+  });
+}
+
+layoutCards();
+
+// 성능 최적화된 onDrag 함수
+function optimizedOnDrag(draggableInstance) {
+  // 이미 RAF가 예약되어 있다면 스킵
+  if (animationId) return;
+  
+  animationId = requestAnimationFrame(() => {
+    // 위로 드래그 시, 두 번째 카드 살짝 올라오게
+    if (cards[1] && draggableInstance.y !== undefined) {
+      const progress = Math.min(Math.abs(draggableInstance.y) / 150, 1);
+      const easeProgress = easeOutCubic(progress); // 부드러운 easing 적용
+      
+      // 두 번째 카드 애니메이션 (회전 효과 제거)
+      gsap.set(cards[1], {
+        y: 80 - (easeProgress * 40),
+        scale: (1 - 0.05) + (easeProgress * 0.05)
+      });
+      
+      // 세 번째 카드에도 미세한 효과 (회전 효과 제거)
+      if (cards[2]) {
+        gsap.set(cards[2], {
+          y: 160 - (easeProgress * 15),
+          scale: (1 - 0.1) + (easeProgress * 0.025)
         });
-    </script>
+      }
+    }
+    animationId = null; // RAF 완료 후 ID 리셋
+  });
+}
+
+// 부드러운 easing 함수
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function initTopCard() {
+  let topCard = cards[0];
+  if (!topCard) return;
+  
+  // 이전 Draggable 인스턴스 정리 (메모리 누수 방지)
+  if (currentDraggable) {
+    currentDraggable.kill();
+    currentDraggable = null;
+  }
+  
+  // RAF ID가 남아있다면 취소
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  
+  currentDraggable = Draggable.create(topCard, {
+    type: "y",
+    inertia: true,
+    onDrag() {
+      // RAF를 사용한 성능 최적화
+      optimizedOnDrag(this);
+    },
+    onRelease() {
+      // RAF 취소 (드래그 완료 시)
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      
+      if (this.y < -100) {
+        // 햅틱 피드백 (지원되는 디바이스에서)
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        
+        // 첫 번째 카드 날리기 - 회전 효과 제거
+        gsap.to(topCard, {
+          y: -window.innerHeight - 50,
+          opacity: 0,
+          scale: 0.9,
+          duration: 0.5,
+          ease: "power2.in",
+          onComplete: () => {
+            deck.appendChild(topCard);
+            cards = Array.from(deck.querySelectorAll(".card"));
+            
+            // 새로 추가된 카드 정보
+            const newCard = cards[cards.length - 1];
+            const newCardIndex = cards.length - 1;
+            
+            console.log('새 카드 인덱스:', newCardIndex); // 디버깅용
+            
+            // 나머지 카드들만 먼저 배치 (새 카드 제외)
+            cards.forEach((card, i) => {
+              if (card !== newCard) {
+                gsap.set(card, {
+                  zIndex: cards.length - i,
+                  scale: 1 - i * 0.05,
+                  y: i * 80,
+                  opacity: i < 4 ? 1 : 0,
+                  x: 0
+                });
+              }
+            });
+            
+            // 새 카드만 별도 처리 - 항상 마지막 보이는 자리(3번)에 나타남
+            const lastVisibleIndex = 3; // 마지막 보이는 카드 자리
+            
+            if (cards.length > lastVisibleIndex) { // 카드가 4장 이상일 때
+              // 새로 보이게 될 카드 찾기 (3번 자리에 있을 카드)
+              const visibleNewCard = cards[lastVisibleIndex];
+              
+              // 새로 보이는 카드를 위쪽에서 시작
+              gsap.set(visibleNewCard, {
+                zIndex: cards.length - lastVisibleIndex,
+                scale: 1 - lastVisibleIndex * 0.05,
+                y: lastVisibleIndex * 80 - 100, // 3번 자리 위쪽에서 시작
+                opacity: 1,
+                x: 0
+              });
+              
+              console.log('새 카드 애니메이션 시작 (3번 자리)'); // 디버깅용
+              
+              // 천천히 3번 자리로 내려오기
+              gsap.to(visibleNewCard, {
+                y: lastVisibleIndex * 80, // 3번 자리
+                duration: 0.8,
+                ease: "power2.out",
+                onComplete: () => {
+                  console.log('새 카드 애니메이션 완료'); // 디버깅용
+                  initTopCard();
+                }
+              });
+            } else {
+              // 카드가 4장 미만인 경우에도 즉시 다음 드래그 준비
+              initTopCard();
+            }
+          }
+        });
+        
+        // 나머지 카드들의 스프링 애니메이션 (회전 효과 제거)
+        cards.slice(1).forEach((card, i) => {
+          if (i < 3) { // 보이는 카드들만
+            gsap.to(card, {
+              y: i * 80,
+              scale: 1 - i * 0.05,
+              duration: 0.6,
+              ease: "back.out(1.7)",
+              delay: i * 0.05 // 약간의 지연으로 자연스러운 효과
+            });
+          }
+        });
+      } else {
+        // 원위치 - 회전 효과 제거
+        gsap.to(topCard, { 
+          y: 0, 
+          duration: 0.6,
+          ease: "back.out(1.7)"
+        });
+        
+        if (cards[1]) {
+          gsap.to(cards[1], {
+            y: 80,
+            scale: 1 - 0.05,
+            duration: 0.6,
+            ease: "back.out(1.7)"
+          });
+        }
+        
+        if (cards[2]) {
+          gsap.to(cards[2], {
+            y: 160,
+            scale: 1 - 0.1,
+            duration: 0.6,
+            ease: "back.out(1.7)"
+          });
+        }
+      }
+    }
+  })[0]; // 배열에서 첫 번째 인스턴스 가져오기
+}
+
+initTopCard();
+
+// 페이지 언로드 시 메모리 정리
+window.addEventListener('beforeunload', () => {
+  if (currentDraggable) {
+    currentDraggable.kill();
+  }
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+});
+</script>
 </body>
 </html>
