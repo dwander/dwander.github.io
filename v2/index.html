@@ -9,12 +9,12 @@ body {
   background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* 중앙 정렬 제거, 상단 정렬로 변경 */
+  align-items: flex-start;
   height: 100vh;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
-  padding-top: 90px; /* 상단 90px 고정 여백 */
+  padding-top: 90px;
   box-sizing: border-box;
 }
 
@@ -30,7 +30,7 @@ body {
   width: 100%;
   height: 100%;
   border-radius: 20px;
-  background: #f8f9fa; /* 밝은 그레이톤으로 통일 */
+  background: #f8f9fa;
   box-shadow: 
     0 15px 30px rgba(0,0,0,0.06),
     0 10px 20px rgba(0,0,0,0.04),
@@ -58,10 +58,9 @@ body {
   cursor: grabbing;
 }
 
-/* 📱 모바일 대응 개선 */
 @media (max-width: 768px) {
   body {
-    padding-top: 70px; /* 모바일에서는 여백 조금 줄임 */
+    padding-top: 70px;
   }
   
   .deck {
@@ -88,8 +87,8 @@ body {
 <script>
 const deck = document.querySelector(".deck");
 let cards = Array.from(deck.querySelectorAll(".card"));
-let currentDraggable = null; // 현재 드래그 인스턴스 추적
-let animationId = null; // RAF ID 추적
+let currentDraggable = null;
+let animationId = null;
 
 function layoutCards() {
   cards.forEach((card, i) => {
@@ -105,24 +104,19 @@ function layoutCards() {
 
 layoutCards();
 
-// 성능 최적화된 onDrag 함수
 function optimizedOnDrag(draggableInstance) {
-  // 이미 RAF가 예약되어 있다면 스킵
   if (animationId) return;
   
   animationId = requestAnimationFrame(() => {
-    // 위로 드래그 시, 두 번째 카드 살짝 올라오게
     if (cards[1] && draggableInstance.y !== undefined) {
       const progress = Math.min(Math.abs(draggableInstance.y) / 150, 1);
-      const easeProgress = easeOutCubic(progress); // 부드러운 easing 적용
+      const easeProgress = easeOutCubic(progress);
       
-      // 두 번째 카드 애니메이션 (회전 효과 제거)
       gsap.set(cards[1], {
         y: 80 - (easeProgress * 40),
         scale: (1 - 0.05) + (easeProgress * 0.05)
       });
       
-      // 세 번째 카드에도 미세한 효과 (회전 효과 제거)
       if (cards[2]) {
         gsap.set(cards[2], {
           y: 160 - (easeProgress * 15),
@@ -130,161 +124,164 @@ function optimizedOnDrag(draggableInstance) {
         });
       }
     }
-    animationId = null; // RAF 완료 후 ID 리셋
+    animationId = null;
   });
 }
 
-// 부드러운 easing 함수
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }
 
 function initTopCard() {
   let topCard = cards[0];
-  if (!topCard) return;
+  if (!topCard) {
+    console.log('topCard가 없음');
+    return;
+  }
   
-  // 이전 Draggable 인스턴스 정리 (메모리 누수 방지)
+  console.log('initTopCard 호출됨, topCard:', topCard.textContent);
+  
   if (currentDraggable) {
+    console.log('이전 Draggable 정리 중...');
     currentDraggable.kill();
     currentDraggable = null;
   }
   
-  // RAF ID가 남아있다면 취소
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
   }
   
-  currentDraggable = Draggable.create(topCard, {
-    type: "y",
-    inertia: true,
-    onDrag() {
-      // RAF를 사용한 성능 최적화
-      optimizedOnDrag(this);
-    },
-    onRelease() {
-      // RAF 취소 (드래그 완료 시)
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-      
-      if (this.y < -100) {
-        // 햅틱 피드백 (지원되는 디바이스에서)
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
+  try {
+    currentDraggable = Draggable.create(topCard, {
+      type: "y",
+      inertia: true,
+      onDrag() {
+        optimizedOnDrag(this);
+      },
+      onRelease() {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
         }
         
-        // 첫 번째 카드 날리기 - 회전 효과 제거
-        gsap.to(topCard, {
-          y: -window.innerHeight - 50,
-          opacity: 0,
-          scale: 0.9,
-          duration: 0.5,
-          ease: "power2.in",
-          onComplete: () => {
-            deck.appendChild(topCard);
-            cards = Array.from(deck.querySelectorAll(".card"));
-            
-            // 새로 추가된 카드 정보
-            const newCard = cards[cards.length - 1];
-            const newCardIndex = cards.length - 1;
-            
-            console.log('새 카드 인덱스:', newCardIndex); // 디버깅용
-            
-            // 나머지 카드들만 먼저 배치 (새 카드 제외)
-            cards.forEach((card, i) => {
-              if (card !== newCard) {
-                gsap.set(card, {
-                  zIndex: cards.length - i,
-                  scale: 1 - i * 0.05,
-                  y: i * 80,
-                  opacity: i < 4 ? 1 : 0,
-                  x: 0
-                });
-              }
-            });
-            
-            // 새 카드만 별도 처리 - 항상 마지막 보이는 자리(3번)에 나타남
-            const lastVisibleIndex = 3; // 마지막 보이는 카드 자리
-            
-            if (cards.length > lastVisibleIndex) { // 카드가 4장 이상일 때
-              // 새로 보이게 될 카드 찾기 (3번 자리에 있을 카드)
-              const visibleNewCard = cards[lastVisibleIndex];
+        if (this.y < -100) {
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+          
+          gsap.to(topCard, {
+            y: -window.innerHeight - 50,
+            opacity: 0,
+            scale: 0.9,
+            duration: 0.5,
+            ease: "power2.in",
+            onComplete: () => {
+              deck.appendChild(topCard);
+              cards = Array.from(deck.querySelectorAll(".card"));
               
-              // 새로 보이는 카드를 위쪽에서 시작
-              gsap.set(visibleNewCard, {
-                zIndex: cards.length - lastVisibleIndex,
-                scale: 1 - lastVisibleIndex * 0.05,
-                y: lastVisibleIndex * 80 - 100, // 3번 자리 위쪽에서 시작
-                opacity: 1,
-                x: 0
-              });
+              const newCard = cards[cards.length - 1];
+              const newCardIndex = cards.length - 1;
               
-              console.log('새 카드 애니메이션 시작 (3번 자리)'); // 디버깅용
+              console.log('새 카드 인덱스:', newCardIndex);
               
-              // 천천히 3번 자리로 내려오기
-              gsap.to(visibleNewCard, {
-                y: lastVisibleIndex * 80, // 3번 자리
-                duration: 0.8,
-                ease: "power2.out",
-                onComplete: () => {
-                  console.log('새 카드 애니메이션 완료'); // 디버깅용
-                  initTopCard();
+              cards.forEach((card, i) => {
+                if (card !== newCard) {
+                  gsap.set(card, {
+                    zIndex: cards.length - i,
+                    scale: 1 - i * 0.05,
+                    y: i * 80,
+                    opacity: i < 4 ? 1 : 0,
+                    x: 0
+                  });
                 }
               });
-            } else {
-              // 카드가 4장 미만인 경우에도 즉시 다음 드래그 준비
-              initTopCard();
+              
+              const lastVisibleIndex = 3;
+              
+              if (cards.length > lastVisibleIndex) {
+                const visibleNewCard = cards[lastVisibleIndex];
+                
+                gsap.set(visibleNewCard, {
+                  zIndex: cards.length - lastVisibleIndex,
+                  scale: 1 - lastVisibleIndex * 0.05,
+                  y: lastVisibleIndex * 80 - 100,
+                  opacity: 1,
+                  x: 0
+                });
+                
+                console.log('새 카드 애니메이션 시작 (3번 자리)');
+                
+                // setTimeout으로 즉시 다음 드래그 준비
+                setTimeout(() => {
+                  console.log('다음 드래그 준비됨');
+                  initTopCard();
+                }, 0);
+                
+                gsap.to(visibleNewCard, {
+                  y: lastVisibleIndex * 80,
+                  duration: 0.8,
+                  ease: "power2.out",
+                  onComplete: () => {
+                    console.log('새 카드 애니메이션 완료');
+                  }
+                });
+              } else {
+                setTimeout(() => {
+                  console.log('다음 드래그 준비됨 (4장 미만)');
+                  initTopCard();
+                }, 0);
+              }
             }
-          }
-        });
-        
-        // 나머지 카드들의 스프링 애니메이션 (회전 효과 제거)
-        cards.slice(1).forEach((card, i) => {
-          if (i < 3) { // 보이는 카드들만
-            gsap.to(card, {
-              y: i * 80,
-              scale: 1 - i * 0.05,
+          });
+          
+          cards.slice(1).forEach((card, i) => {
+            if (i < 3) {
+              gsap.to(card, {
+                y: i * 80,
+                scale: 1 - i * 0.05,
+                duration: 0.6,
+                ease: "back.out(1.7)",
+                delay: i * 0.05
+              });
+            }
+          });
+        } else {
+          gsap.to(topCard, { 
+            y: 0, 
+            duration: 0.6,
+            ease: "back.out(1.7)"
+          });
+          
+          if (cards[1]) {
+            gsap.to(cards[1], {
+              y: 80,
+              scale: 1 - 0.05,
               duration: 0.6,
-              ease: "back.out(1.7)",
-              delay: i * 0.05 // 약간의 지연으로 자연스러운 효과
+              ease: "back.out(1.7)"
             });
           }
-        });
-      } else {
-        // 원위치 - 회전 효과 제거
-        gsap.to(topCard, { 
-          y: 0, 
-          duration: 0.6,
-          ease: "back.out(1.7)"
-        });
-        
-        if (cards[1]) {
-          gsap.to(cards[1], {
-            y: 80,
-            scale: 1 - 0.05,
-            duration: 0.6,
-            ease: "back.out(1.7)"
-          });
-        }
-        
-        if (cards[2]) {
-          gsap.to(cards[2], {
-            y: 160,
-            scale: 1 - 0.1,
-            duration: 0.6,
-            ease: "back.out(1.7)"
-          });
+          
+          if (cards[2]) {
+            gsap.to(cards[2], {
+              y: 160,
+              scale: 1 - 0.1,
+              duration: 0.6,
+              ease: "back.out(1.7)"
+            });
+          }
         }
       }
-    }
-  })[0]; // 배열에서 첫 번째 인스턴스 가져오기
+    })[0];
+    
+    console.log('Draggable 생성 완료');
+  } catch (error) {
+    console.error('Draggable 생성 실패:', error);
+  }
 }
 
 initTopCard();
 
-// 페이지 언로드 시 메모리 정리
 window.addEventListener('beforeunload', () => {
   if (currentDraggable) {
     currentDraggable.kill();
