@@ -1,0 +1,26 @@
+{
+  "name": "notion-kpag-data-write",
+  "version": "1.0.0",
+  "description": "KPAG 웨딩 촬영 데이터 관리용 MCP 서버",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "notion-kpag-data-write": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
