@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPAG 카카오톡 스케줄 파서</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1f36;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .left-panel {
+            background: #252b47;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            height: calc(100vh - 40px);
+            overflow: hidden;
+        }
+
+        .right-panel {
+            background: #252b47;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .speaker-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .speaker-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
+        }
+
+        .checkbox-group label {
+            font-size: 13px;
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        .drop-zone {
+            border: 2px dashed #475569;
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            background: #1e293b;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .drop-zone.has-file {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .drop-zone-text {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .file-info {
+            background: #10b981;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .textarea-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .textarea-container textarea {
+            flex: 1;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            color: #ffffff;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            resize: none;
+            min-height: 200px;
+        }
+
+        .textarea-container textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .textarea-container .char-count {
+            font-size: 11px;
+            color: #64748b;
+            text-align: right;
+            margin-top: 8px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #475569;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #334155;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .results-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .stat-item {
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .expand-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .expand-btn:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #1e293b;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .results-table th {
+            background: #334155;
+            color: #94a3b8;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .results-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #374151;
+            color: #e2e8f0;
+            vertical-align: top;
+        }
+
+        .results-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1a1f36;
+            margin: 20px;
+            border-radius: 12px;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #ffffff;
+        }
+
+        .modal-body {
+            flex: 1;
+            padding: 24px;
+            overflow: auto;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 48px;
+            color: #94a3b8;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #334155;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ef4444;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #10b981;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .left-panel {
+                order: 1;
+            }
+            
+            .right-panel {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 왼쪽 패널 -->
+        <div class="left-panel">
+            <h1 style="color: #ffffff; font-size: 24px; font-weight: 700; margin-bottom: 8px;">KPAG 카카오톡 스케줄 파서</h1>
+            
+            <!-- 매니저 대화명 설정 -->
+            <div>
+                <div class="section-title">매니저 대화명 (선택)</div>
+                <div class="input-group">
+                    <input type="text" id="speakerName" class="speaker-input" value="KPAG(업무용)" placeholder="매니저 대화명 입력">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoDetect">
+                        <label for="autoDetect">어느 화자가 될 지 자동 감지</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 파일 드래그 앤 드롭 -->
+            <div>
+                <div class="section-title">파일 업로드</div>
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">📁</div>
+                    <div class="drop-zone-text">
+                        카카오톡 대화 .txt 파일을<br>
+                        여기에 드래그 하거나 클릭하세요
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                <div id="fileInfo" class="file-info hidden"></div>
+            </div>
+
+            <!-- 텍스트 붙여넣기 -->
+            <div class="textarea-container">
+                <div class="section-title">또는 텍스트 붙여넣기</div>
+                <textarea id="textInput" placeholder="카카오톡 대화를 여기에 붙여넣으세요..."></textarea>
+                <div class="char-count">
+                    <span id="charCount">글자 수: 0</span>
+                </div>
+            </div>
+
+            <!-- 실행 버튼 -->
+            <div class="button-group">
+                <button class="btn btn-primary" id="parseBtn">
+                    <span>🔍</span> 파싱 실행
+                </button>
+                <button class="btn btn-secondary" id="downloadBtn" disabled>
+                    <span>📥</span> CSV 다운로드
+                </button>
+            </div>
+        </div>
+
+        <!-- 오른쪽 패널 -->
+        <div class="right-panel">
+            <div class="results-header">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="results-title">파싱 결과</div>
+                    <div class="results-stats" id="resultsStats">
+                        <div class="stat-item">전체: <span id="totalCount">0</span> rows</div>
+                    </div>
+                </div>
+                <button class="expand-btn" id="expandBtn">전체화면</button>
+            </div>
+
+            <div id="loadingDiv" class="loading">
+                <div class="loading-spinner"></div>
+                <div>파싱 중...</div>
+            </div>
+
+            <div id="errorDiv" class="hidden"></div>
+            <div id="successDiv" class="hidden"></div>
+
+            <div class="table-container" id="tableContainer">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>시간</th>
+                            <th>예식장</th>
+                            <th>신랑</th>
+                            <th>신부</th>
+                            <th>연락처</th>
+                            <th>브랜드</th>
+                            <th>상품</th>
+                            <th>업체</th>
+                            <th>플래너</th>
+                            <th>요청사항</th>
+                            <th>촬영비</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="12" style="text-align: center; padding: 48px; color: #64748b;">
+                                파싱된 데이터가 여기에 표시됩니다
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체화면 모달 -->
+    <div id="fullscreenModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">파싱 결과 - 전체화면</div>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>날짜</th>
+                                <th>시간</th>
+                                <th>예식장</th>
+                                <th>신랑</th>
+                                <th>신부</th>
+                                <th>연락처</th>
+                                <th>브랜드</th>
+                                <th>상품</th>
+                                <th>업체</th>
+                                <th>플래너</th>
+                                <th>요청사항</th>
+                                <th>촬영비</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalResultsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let parsedData = [];
+        let currentFile = null;
+
+        // DOM 요소들
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const textInput = document.getElementById('textInput');
+        const charCount = document.getElementById('charCount');
+        const speakerName = document.getElementById('speakerName');
+        const autoDetect = document.getElementById('autoDetect');
+        const parseBtn = document.getElementById('parseBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resultsBody = document.getElementById('resultsBody');
+        const modalResultsBody = document.getElementById('modalResultsBody');
+        const totalCount = document.getElementById('totalCount');
+        const loadingDiv = document.getElementById('loadingDiv');
+        const errorDiv = document.getElementById('errorDiv');
+        const successDiv = document.getElementById('successDiv');
+        const expandBtn = document.getElementById('expandBtn');
+        const fullscreenModal = document.getElementById('fullscreenModal');
+        const closeModal = document.getElementById('closeModal');
+
+        // === 핵심 함수들 먼저 정의 ===
+
+        // 신랑신부 이름 분리 함수
+        function splitTwoNames(s) {
+            const m = s.match(/^\s*(?:(\S+)\s+(\S+\s+\S+)|(\S+\s+\S+)\s+(\S+)|(\S+)\s+(\S+)|(\S+\s+\S+)\s+(\S+\s+\S+))\s*$/);
+            return m ? [m[1]||m[3]||m[5]||m[7], m[2]||m[4]||m[6]||m[8]] : null;
+        }
+
+        // 스케줄 라인 유효성 검증
+        function isValidScheduleLine(line) {
+            const trimmedLine = line.trim();
+            
+            if (trimmedLine.length <= 1) return false;
+            if (trimmedLine.includes('---------------')) return false;
+            if (/\d{4}년\s*\d{1,2}월\s*\d{1,2}일/.test(trimmedLine)) return false;
+            if (/^(월|화|수|목|금|토|일)요일\s*$/.test(trimmedLine)) return false;
+            
+            // 순수 이모티콘/인사말만 있는 라인 제외 (내용이 있으면 허용)
+            const pureExcludePatterns = [
+                /^건입니\s*$/, /^확인\s*$/, /^감사\s*$/, /^스케줄입니다\s*$/, /^부탁드리겠습니\s*$/,
+                /^[\^\s]*$/, /^[:)\s]*$/, /^[:D\s]*$/, /^[ㅠㅜ\s]*$/, /^헉\s*$/, /^아하\s*$/,
+                /^안녕하세요\s*$/, /^좋은아침\s*$/, /^잘다녀오\s*$/, /^기상체크\s*$/, /^확인부탁\s*$/,
+                /^재발송\s*$/, /^특이사항\s*$/, /^전체\s*재확인\s*$/, /^내용\s*한번씩\s*$/, /^이번주\s*$/
+            ];
+            
+            // 라인이 순수하게 이모티콘/인사말만 있는 경우만 제외
+            for (const pattern of pureExcludePatterns) {
+                if (pattern.test(trimmedLine)) return false;
+            }
+            
+            return true;
+        }
+
+        // 필수 필드 검증
+        function isValidScheduleBlock(lines) {
+            if (lines.length < 4) return false;
+            
+            // 1. 날짜 검증
+            const dateLine = lines[0].trim();
+            if (!/^\d{4}\.\d{2}\.\d{2}$/.test(dateLine)) return false;
+            
+            // 2. 시간 검증
+            let hasValidTime = false;
+            for (let i = 1; i < Math.min(lines.length, 4); i++) {
+                const line = lines[i].trim();
+                if (/^\d{1,2}:\d{2}$/.test(line)) {
+                    hasValidTime = true;
+                    break;
+                }
+            }
+            if (!hasValidTime) return false;
+            
+            // 3. 웨딩홀 검증
+            if (!lines[1] || lines[1].trim().length < 2) return false;
+            
+            // 4. 신랑신부 검증
+            const hasCoupleNames = lines.some((line, index) => {
+                const trimmedLine = line.trim();
+                const result = splitTwoNames(trimmedLine);
+                
+                if (result !== null && result[0] && result[1]) {
+                    const isKoreanNames = /^[가-힣\s]+$/.test(trimmedLine);
+                    const isNotVenue = index !== 1;
+                    const isNotPhone = !/010[-.\s]?\d{3,4}[-.\s]?\d{4}/.test(trimmedLine);
+                    const isNotBrand = !/[KBA]\s*\[|세컨플로우|세븐스|그라피|\d+[pP]/.test(trimmedLine);
+                    
+                    return isKoreanNames && isNotVenue && isNotPhone && isNotBrand;
+                }
+                return false;
+            });
+            if (!hasCoupleNames) return false;
+            
+            // 5. 브랜드/상품 검증
+            const hasBrand = lines.some(line => 
+                /[KBA]\s*\[/.test(line) || 
+                /(세븐스|그라피|플로우)/i.test(line) ||
+                /\d+[pP]/.test(line)
+            );
+            if (!hasBrand) return false;
+            
+            const hasProduct = lines.some(line => /\d+[pP]/.test(line));
+            if (!hasProduct) return false;
+            
+            return true;
+        }
+
+        // 브랜드/상품 파싱
+        function parseBrandProduct(text) {
+            let cleaned = text
+                .replace(/\([^)]*\)/g, '')
+                .replace(/\d+권/g, '')
+                .replace(/미니북.*$/g, '')
+                .replace(/\+.*$/g, '')
+                .trim();
+            
+            const patterns = [
+                /(기본\s*\d+[pP])$/i,
+                /(\d+[pP])$/i,
+                /(기본)$/,
+                /(프리미엄)$/,
+                /(스탠다드)$/
+            ];
+            
+            let product = '기본';
+            let brand = cleaned;
+            
+            for (const pattern of patterns) {
+                const match = cleaned.match(pattern);
+                if (match) {
+                    product = match[1].replace(/\s+/g, ' ');
+                    brand = cleaned.replace(pattern, '').trim();
+                    break;
+                }
+            }
+            
+            return { 
+                brand: brand.replace(/\[|\]/g, ''), 
+                product 
+            };
+        }
+
+        // 완전한 스케줄 파싱
+        function parseCompleteSchedule(lines) {
+            const schedule = {};
+            let idx = 0;
+            
+            schedule.날짜 = lines[idx++] || '';
+            schedule.예식장홀 = lines[idx++] || '';
+            schedule.시간 = lines[idx++] || '';
+            schedule.신랑신부 = lines[idx++] || '';
+            
+            // 연락처 체크
+            if (idx < lines.length && /010[-.\s]?\d{3,4}[-.\s]?\d{4}/.test(lines[idx])) {
+                schedule.연락처 = lines[idx++];
+            } else {
+                schedule.연락처 = '';
+            }
+            
+            // 브랜드상품
+            if (idx < lines.length) {
+                const brandProduct = parseBrandProduct(lines[idx++]);
+                schedule.브랜드 = brandProduct.brand;
+                schedule.상품 = brandProduct.product;
+            } else {
+                schedule.브랜드 = '';
+                schedule.상품 = '';
+            }
+            
+            // 나머지 파싱 (작가 및 요청사항)
+            const remaining = lines.slice(idx);
+            
+            // 작가 라인들 찾기
+            const photographerIndices = [];
+            remaining.forEach((line, index) => {
+                const trimmed = line.trim();
+                const isKoreanName = /^[가-힣]{2,3}$/.test(trimmed);
+                const isPhotographerWithPhone = /^[가-힣]{2,4}\s+010[-.\s]?\d{3,4}[-.\s]?\d{4}.*(?:메인|서브)/.test(trimmed);
+                const hasPhoneWithRole = /010[-.\s]?\d{3,4}[-.\s]?\d{4}.*(?:메인|서브)/.test(trimmed);
+                
+                if (isKoreanName || isPhotographerWithPhone || hasPhoneWithRole) {
+                    photographerIndices.push(index);
+                }
+            });
+            
+            // 요청사항: 작가 라인들과 마지막 라인 제외
+            let requirements = [];
+            for (let i = 0; i < remaining.length - 1; i++) {
+                if (!photographerIndices.includes(i)) {
+                    requirements.push(remaining[i]);
+                }
+            }
+            
+            // 업체/플래너 (마지막 라인)
+            const lastLine = remaining[remaining.length - 1] || '';
+            let company = '';
+            let planner = '';
+            
+            if (lastLine.includes(' ')) {
+                const parts = lastLine.split(' ');
+                company = parts[0];
+                planner = parts.slice(1).join(' ');
+            } else {
+                company = lastLine;
+            }
+            
+            schedule.요청사항 = requirements.join(' ');
+            schedule.업체 = company;
+            schedule.플래너 = planner;
+            schedule.촬영비 = '';
+            
+            // 신랑신부 분리
+            const nameResult = splitTwoNames(schedule.신랑신부);
+            if (nameResult && nameResult[0] && nameResult[1]) {
+                schedule.신랑 = nameResult[0];
+                schedule.신부 = nameResult[1];
+            } else {
+                schedule.신랑 = '';
+                schedule.신부 = '';
+            }
+            
+            return schedule;
+        }
+
+        // === 디버깅 함수 ===
+
+        function testSingleBlock(blockText) {
+            console.log('=== 단일 블록 테스트 시작 ===');
+            const lines = blockText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            console.log('입력 라인들:', lines);
+            
+            const filteredLines = lines.filter(line => isValidScheduleLine(line));
+            console.log('필터링된 라인들:', filteredLines);
+            
+            const isValid = isValidScheduleBlock(filteredLines);
+            console.log('블록 유효성:', isValid);
+            
+            if (isValid) {
+                const parsed = parseCompleteSchedule(filteredLines);
+                console.log('파싱 결과:', parsed);
+                return parsed;
+            } else {
+                console.log('블록이 유효하지 않음');
+                return null;
+            }
+        }
+
+        // === 메인 파싱 로직 ===
+
+        // 화자 메시지 추출
+        function extractSpeakerMessages(chatText) {
+            const lines = chatText.split('\n');
+            const speakers = new Set();
+            const messages = {};
+            
+            let currentSpeaker = null;
+            let currentMessage = [];
+            let currentTime = null;
+            
+            for (let line of lines) {
+                const speakerPattern = /^\[([^\]]+)\]\s*\[([^\]]+)\]\s*(.*)$/;
+                const match = line.match(speakerPattern);
+                
+                if (match) {
+                    if (currentSpeaker && currentMessage.length > 0) {
+                        if (!messages[currentSpeaker]) messages[currentSpeaker] = [];
+                        messages[currentSpeaker].push({
+                            content: currentMessage.join('\n'),
+                            time: currentTime,
+                            lines: [...currentMessage]
+                        });
+                    }
+                    
+                    const [, speaker, time, content] = match;
+                    speakers.add(speaker);
+                    currentSpeaker = speaker;
+                    currentTime = time;
+                    currentMessage = content.trim() ? [content] : [];
+                } else if (line.trim() && currentSpeaker) {
+                    currentMessage.push(line);
+                }
+            }
+            
+            if (currentSpeaker && currentMessage.length > 0) {
+                if (!messages[currentSpeaker]) messages[currentSpeaker] = [];
+                messages[currentSpeaker].push({
+                    content: currentMessage.join('\n'),
+                    time: currentTime,
+                    lines: [...currentMessage]
+                });
+            }
+            
+            return { speakers: Array.from(speakers), messages };
+        }
+
+        // 메시지별 스케줄 블록 추출
+        function extractScheduleBlocksFromMessage(messageContent, messageIndex) {
+            const lines = messageContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            const blocks = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (/^\d{4}\.\d{2}\.\d{2}$/.test(lines[i])) {
+                    const block = [lines[i]];
+                    let j = i + 1;
+                    
+                    while (j < lines.length && !/^\d{4}\.\d{2}\.\d{2}$/.test(lines[j])) {
+                        if (isValidScheduleLine(lines[j])) {
+                            block.push(lines[j]);
+                        }
+                        j++;
+                    }
+                    
+                    if (block.length >= 4) {
+                        blocks.push({ 
+                            lines: block, 
+                            messageIndex: messageIndex,
+                            startIndex: i 
+                        });
+                    }
+                    i = j - 1;
+                }
+            }
+            
+            return blocks;
+        }
+
+        // 변경사항 감지
+        function detectChanges(blocks) {
+            const changes = [];
+            const finalSchedules = [];
+            
+            const byUniqueSchedule = {};
+            blocks.forEach(block => {
+                const date = block.lines[0];
+                const venue = block.lines[1] || '';
+                
+                let coupleNames = '';
+                for (let i = 0; i < block.lines.length; i++) {
+                    const line = block.lines[i];
+                    const trimmedLine = line.trim();
+                    const result = splitTwoNames(trimmedLine);
+                    
+                    if (result !== null && result[0] && result[1]) {
+                        const isKoreanNames = /^[가-힣\s]+$/.test(trimmedLine);
+                        const isNotVenue = i !== 1;
+                        const isNotPhone = !/010[-.\s]?\d{3,4}[-.\s]?\d{4}/.test(trimmedLine);
+                        const isNotBrand = !/[KBA]\s*\[|세컨플로우|세븐스|그라피|\d+[pP]/.test(trimmedLine);
+                        
+                        if (isKoreanNames && isNotVenue && isNotPhone && isNotBrand) {
+                            coupleNames = trimmedLine;
+                            break;
+                        }
+                    }
+                }
+                
+                const key = `${date}|${venue.trim()}|${coupleNames}`;
+                
+                if (!byUniqueSchedule[key]) byUniqueSchedule[key] = [];
+                byUniqueSchedule[key].push(block);
+            });
+            
+            Object.entries(byUniqueSchedule).forEach(([key, scheduleBlocks]) => {
+                const [date, venue, coupleNames] = key.split('|');
+                
+                if (scheduleBlocks.length > 1) {
+                    changes.push({
+                        type: 'CHANGE',
+                        date,
+                        venue,
+                        coupleNames,
+                        count: scheduleBlocks.length,
+                        blocks: scheduleBlocks
+                    });
+                    const latestBlock = scheduleBlocks.reduce((latest, current) => 
+                        current.messageIndex > latest.messageIndex ? current : latest
+                    );
+                    finalSchedules.push(latestBlock);
+                } else {
+                    finalSchedules.push(scheduleBlocks[0]);
+                }
+            });
+            
+            return { changes, finalSchedules };
+        }
+
+        // 메인 파싱 함수
+        async function parseKakaoChat(chatText, targetSpeaker) {
+            const speakers = extractSpeakerMessages(chatText);
+            
+            if (speakers.speakers.length === 0) {
+                throw new Error('카카오톡 대화 형식을 인식할 수 없습니다.');
+            }
+
+            let finalSpeaker = targetSpeaker;
+            
+            if (autoDetect.checked || !targetSpeaker) {
+                let bestSpeaker = '';
+                let maxSchedules = 0;
+                
+                for (const speaker of speakers.speakers) {
+                    const speakerText = speakers.messages[speaker]
+                        .map(msg => msg.content).join('\n');
+                    const scheduleCount = (speakerText.match(/\d{4}\.\d{2}\.\d{2}/g) || []).length;
+                    
+                    if (scheduleCount > maxSchedules) {
+                        maxSchedules = scheduleCount;
+                        bestSpeaker = speaker;
+                    }
+                }
+                
+                if (bestSpeaker) {
+                    finalSpeaker = bestSpeaker;
+                }
+            }
+            
+            if (!speakers.messages[finalSpeaker]) {
+                throw new Error(`"${finalSpeaker}" 화자를 찾을 수 없습니다. 사용 가능한 화자: ${speakers.speakers.join(', ')}`);
+            }
+
+            const managerMessages = speakers.messages[finalSpeaker];
+            const allScheduleBlocks = [];
+            
+            managerMessages.forEach((message, messageIndex) => {
+                const messageBlocks = extractScheduleBlocksFromMessage(message.content, messageIndex);
+                allScheduleBlocks.push(...messageBlocks);
+            });
+            
+            const validBlocks = allScheduleBlocks.filter(block => 
+                isValidScheduleBlock(block.lines)
+            );
+            
+            const changeAnalysis = detectChanges(validBlocks);
+            
+            const finalSchedules = changeAnalysis.finalSchedules.map(block => 
+                parseCompleteSchedule(block.lines)
+            );
+
+            return {
+                success: true,
+                statistics: {
+                    totalSpeakers: speakers.speakers.length,
+                    targetSpeaker: finalSpeaker,
+                    scheduleBlocks: allScheduleBlocks.length,
+                    changes: changeAnalysis.changes.length,
+                    finalSchedules: finalSchedules.length
+                },
+                speakers: speakers.speakers,
+                changes: changeAnalysis.changes,
+                schedules: finalSchedules
+            };
+        }
+
+        // === UI 이벤트 처리 ===
+
+        // 이벤트 리스너들
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('dragleave', handleDragLeave);
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        textInput.addEventListener('input', updateCharCount);
+        speakerName.addEventListener('input', saveSpeakerName);
+        parseBtn.addEventListener('click', handleParse);
+        downloadBtn.addEventListener('click', handleDownload);
+        expandBtn.addEventListener('click', () => fullscreenModal.style.display = 'block');
+        closeModal.addEventListener('click', () => fullscreenModal.style.display = 'none');
+        
+        fullscreenModal.addEventListener('click', (e) => {
+            if (e.target === fullscreenModal) {
+                fullscreenModal.style.display = 'none';
+            }
+        });
+
+        // 파일 처리
+        function handleDragOver(e) {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.txt')) {
+                showError('txt 파일만 업로드 가능합니다.');
+                return;
+            }
+
+            currentFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                textInput.value = e.target.result;
+                updateCharCount();
+                
+                dropZone.classList.add('has-file');
+                dropZone.innerHTML = `
+                    <div class="drop-zone-icon">✅</div>
+                    <div class="drop-zone-text">파일이 로드되었습니다</div>
+                `;
+                
+                fileInfo.innerHTML = `파일: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`;
+                fileInfo.classList.remove('hidden');
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function updateCharCount() {
+            const text = textInput.value;
+            charCount.textContent = `글자 수: ${text.length.toLocaleString()}`;
+        }
+
+        // 로컬스토리지 처리
+        function saveSpeakerName() {
+            try {
+                localStorage.setItem('kpag_speaker_name', speakerName.value);
+            } catch (e) {
+                console.log('localStorage not supported');
+            }
+        }
+
+        function loadSpeakerName() {
+            try {
+                const savedName = localStorage.getItem('kpag_speaker_name');
+                if (savedName) {
+                    speakerName.value = savedName;
+                }
+            } catch (e) {
+                console.log('localStorage not supported');
+            }
+        }
+
+        // 파싱 실행
+        async function handleParse() {
+            const text = textInput.value.trim();
+            if (!text) {
+                showError('파싱할 텍스트를 입력하세요.');
+                return;
+            }
+
+            setLoading(true);
+            hideMessages();
+
+            try {
+                const result = await parseKakaoChat(text, speakerName.value.trim());
+                
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                parsedData = result.schedules;
+                updateResults(result);
+                downloadBtn.disabled = false;
+                
+                showSuccess(`파싱 완료! ${parsedData.length}개의 스케줄을 찾았습니다.`);
+                
+            } catch (error) {
+                console.error('파싱 오류:', error);
+                showError(`파싱 중 오류가 발생했습니다: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 결과 업데이트
+        function updateResults(result) {
+            const tbody = resultsBody;
+            const modalTbody = modalResultsBody;
+            
+            tbody.innerHTML = '';
+            modalTbody.innerHTML = '';
+            
+            if (result.schedules.length === 0) {
+                const emptyRow = `
+                    <tr>
+                        <td colspan="12" style="text-align: center; padding: 48px; color: #64748b;">
+                            파싱된 스케줄이 없습니다
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML = emptyRow;
+                modalTbody.innerHTML = emptyRow;
+                return;
+            }
+            
+            result.schedules.forEach(schedule => {
+                const mainRow = createTableRow(schedule);
+                const modalRow = createTableRow(schedule);
+                tbody.appendChild(mainRow);
+                modalTbody.appendChild(modalRow);
+            });
+            
+            totalCount.textContent = result.schedules.length;
+        }
+
+        function createTableRow(schedule) {
+            const row = document.createElement('tr');
+            const fields = ['날짜', '시간', '예식장홀', '신랑', '신부', '연락처', '브랜드', '상품', '업체', '플래너', '요청사항', '촬영비'];
+            
+            fields.forEach((field, index) => {
+                const td = document.createElement('td');
+                let value = schedule[field] || '';
+                
+                if (field === '요청사항' && value.length > 50) {
+                    td.title = value;
+                    value = value.substring(0, 47) + '...';
+                }
+                
+                if (field === '날짜') {
+                    td.style.cursor = 'pointer';
+                    td.style.color = '#3b82f6';
+                    td.title = '클릭하여 파싱 데이터 복사';
+                    td.addEventListener('click', () => copyScheduleToClipboard(schedule));
+                }
+                
+                td.textContent = value;
+                row.appendChild(td);
+            });
+            
+            return row;
+        }
+
+        // 클립보드 복사
+        async function copyScheduleToClipboard(schedule) {
+            const formatData = `=== 파싱된 스케줄 데이터 ===
+날짜: ${schedule.날짜 || ''}
+시간: ${schedule.시간 || ''}
+예식장/홀: ${schedule.예식장홀 || ''}
+신랑: ${schedule.신랑 || ''}
+신부: ${schedule.신부 || ''}
+연락처: ${schedule.연락처 || ''}
+브랜드: ${schedule.브랜드 || ''}
+상품: ${schedule.상품 || ''}
+업체: ${schedule.업체 || ''}
+플래너: ${schedule.플래너 || ''}
+요청사항: ${schedule.요청사항 || ''}
+촬영비: ${schedule.촬영비 || ''}
+
+원본 신랑신부: ${schedule.신랑신부 || ''}`;
+
+            try {
+                await navigator.clipboard.writeText(formatData);
+                showSuccess('파싱된 데이터가 클립보드에 복사되었습니다.');
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = formatData;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showSuccess('파싱된 데이터가 클립보드에 복사되었습니다.');
+            }
+        }
+
+        // CSV 다운로드
+        function handleDownload() {
+            if (parsedData.length === 0) {
+                showError('다운로드할 데이터가 없습니다.');
+                return;
+            }
+
+            const headers = ['날짜', '시간', '예식장홀', '신랑', '신부', '연락처', '브랜드', '상품', '업체', '플래너', '요청사항', '촬영비'];
+            const csvContent = [
+                headers.join(','),
+                ...parsedData.map(row => 
+                    headers.map(header => {
+                        const value = row[header] || '';
+                        return `"${value.replace(/"/g, '""')}"`;
+                    }).join(',')
+                )
+            ].join('\n');
+
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `KPAG_스케줄_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showSuccess('CSV 파일이 다운로드되었습니다.');
+        }
+
+        // UI 헬퍼 함수들
+        function setLoading(loading) {
+            if (loading) {
+                loadingDiv.style.display = 'block';
+                parseBtn.disabled = true;
+                downloadBtn.disabled = true;
+            } else {
+                loadingDiv.style.display = 'none';
+                parseBtn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+        }
+
+        function hideMessages() {
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+        }
+
+        // 초기화 및 전역 함수 노출
+        updateCharCount();
+        loadSpeakerName();
+
+        // 디버깅 함수들을 전역에 노출
+        window.testSingleBlock = testSingleBlock;
+        window.isValidScheduleLine = isValidScheduleLine;
+        window.isValidScheduleBlock = isValidScheduleBlock;
+        window.parseCompleteSchedule = parseCompleteSchedule;
+        window.splitTwoNames = splitTwoNames;
+        
+        console.log('🎉 KPAG 파서가 준비되었습니다!');
+        console.log('디버깅 함수: testSingleBlock(), splitTwoNames(), isValidScheduleLine(), isValidScheduleBlock(), parseCompleteSchedule()');
+    </script>
+</body>
+</html>

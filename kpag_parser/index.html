@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPAG 카카오톡 스케줄 파서</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 왼쪽 패널 -->
+        <div class="left-panel">
+            <h1 class="main-title">KPAG 카카오톡 스케줄 파서</h1>
+            
+            <!-- 매니저 대화명 설정 -->
+            <div>
+                <div class="section-title">매니저 대화명 (선택)</div>
+                <div class="input-group">
+                    <input type="text" id="speakerName" class="speaker-input" value="KPAG(업무용)" placeholder="매니저 대화명 입력">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoDetect">
+                        <label for="autoDetect">어느 화자가 될 지 자동 감지</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 파일 드래그 앤 드롭 -->
+            <div>
+                <div class="section-title">파일 업로드</div>
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">📁</div>
+                    <div class="drop-zone-text">
+                        카카오톡 대화 .txt 파일을<br>
+                        여기에 드래그 하거나 클릭하세요
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                <div id="fileInfo" class="file-info hidden"></div>
+            </div>
+
+            <!-- 텍스트 붙여넣기 -->
+            <div class="textarea-container">
+                <div class="section-title">또는 텍스트 붙여넣기</div>
+                <textarea id="textInput" placeholder="카카오톡 대화를 여기에 붙여넣으세요..."></textarea>
+                <div class="char-count">
+                    <span id="charCount">글자 수: 0</span>
+                </div>
+            </div>
+
+            <!-- 실행 버튼 -->
+            <div class="button-group">
+                <button class="btn btn-primary" id="parseBtn">
+                    <span>🔍</span> 파싱 실행
+                </button>
+                <button class="btn btn-secondary" id="downloadBtn" disabled>
+                    <span>📥</span> CSV 다운로드
+                </button>
+            </div>
+        </div>
+
+        <!-- 오른쪽 패널 -->
+        <div class="right-panel">
+            <div class="results-header">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="results-title">파싱 결과</div>
+                    <div class="results-stats" id="resultsStats">
+                        <div class="stat-item">전체: <span id="totalCount">0</span> rows</div>
+                    </div>
+                </div>
+                <button class="expand-btn" id="expandBtn">전체화면</button>
+            </div>
+
+            <div id="loadingDiv" class="loading">
+                <div class="loading-spinner"></div>
+                <div>파싱 중...</div>
+            </div>
+
+            <div id="errorDiv" class="hidden"></div>
+            <div id="successDiv" class="hidden"></div>
+
+            <div class="table-container" id="tableContainer">
+                <table class="results-table">
+                    <thead>
+                        <tr id="tableHeader">
+                            <!-- 헤더는 JavaScript에서 동적 생성 -->
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr id="guideRow">
+                            <td colspan="11" style="text-align: center; padding: 48px 24px; color: #94a3b8; line-height: 1.6;">
+                                <div style="max-width: 600px; margin: 0 auto;">
+                                    <h3 style="color: #ffffff; font-size: 18px; margin-bottom: 24px; font-weight: 600;">📋 KPAG 스케줄 파서 사용법</h3>
+                                    
+                                    <div style="text-align: left; background: #1e293b; padding: 24px; border-radius: 8px; margin-bottom: 20px;">
+                                        <h4 style="color: #3b82f6; font-size: 16px; margin-bottom: 12px;">📱 1. 카카오톡 대화 내보내기</h4>
+                                        <p style="margin-bottom: 8px;">• KPAG 스케줄을 받는 카카오톡 대화방에서</p>
+                                        <p style="margin-bottom: 8px;">• 우상단 메뉴 → "대화 내보내기" 선택</p>
+                                        <p>• 생성된 <strong>.txt 파일</strong>을 위 영역에 드래그하거나 클릭하여 업로드</p>
+                                    </div>
+                                    
+                                    <div style="text-align: left; background: #1e293b; padding: 24px; border-radius: 8px; margin-bottom: 20px;">
+                                        <h4 style="color: #10b981; font-size: 16px; margin-bottom: 12px;">⚡ 2. 자동 분석</h4>
+                                        <p>• 파일 업로드와 동시에 대화 내용을 분석하여 스케줄만 추출</p>
+                                    </div>
+                                    
+                                    <div style="text-align: left; background: #1e293b; padding: 24px; border-radius: 8px; margin-bottom: 20px;">
+                                        <h4 style="color: #f59e0b; font-size: 16px; margin-bottom: 12px;">📊 3. 엑셀 활용</h4>
+                                        <p style="margin-bottom: 8px;">• "CSV 다운로드" 버튼으로 <strong>.csv 파일</strong> 다운로드</p>
+                                        <p>• 엑셀, 구글 시트 등에서 "데이터 불러오기"로 활용 가능</p>
+                                    </div>
+                                    
+                                    <div style="background: #422006; border: 1px solid #f59e0b; padding: 16px; border-radius: 8px; color: #fbbf24;">
+                                        <strong>💡 권장사항:</strong> 모바일에서는 불편할 수 있으니 가급적 <strong>큰 화면의 PC</strong>를 이용해주세요
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체화면 모달 -->
+    <div id="fullscreenModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">파싱 결과 - 전체화면</div>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr id="modalTableHeader">
+                                <!-- 헤더는 JavaScript에서 동적 생성 -->
+                            </tr>
+                        </thead>
+                        <tbody id="modalResultsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
