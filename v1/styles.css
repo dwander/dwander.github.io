@@ -908,8 +908,8 @@ body {
 
 /* === Ensure minimum gutter between left check icon and card on all widths === */
 :root {
-  --check-gutter-min: 15px;  /* 최소 카드 왼쪽 여백 (아이콘 1.25rem + 아이콘 left 20px + 여유 12px) */
-  --check-gutter-max: 15px;  /* 넓을 때는 조금 더 여유 */
+  --check-gutter-min: 10px;  /* 최소 카드 왼쪽 여백 (아이콘 1.25rem + 아이콘 left 20px + 여유 12px) */
+  --check-gutter-max: 10px;  /* 넓을 때는 조금 더 여유 */
 }
 
 /* clamp 지원 브라우저에서는 뷰포트에 비례해 조금씩 변하지만 최소 여백은 유지 */
@@ -928,5 +928,5 @@ body {
 
 /* 아이콘은 기존 위치 유지 (left: 20px) */
 .item-wrapper .item-check {
-  left: 25px; /* keep as requested */
+  left: 20px; /* keep as requested */
 }
