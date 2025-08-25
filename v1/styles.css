@@ -904,3 +904,29 @@ body {
 .item-wrapper:has(.item-card.item-completed) {
     --badge-left: var(--badge-left-completed);
 }
+
+
+/* === Ensure minimum gutter between left check icon and card on all widths === */
+:root {
+  --check-gutter-min: 55px;  /* 최소 카드 왼쪽 여백 (아이콘 1.25rem + 아이콘 left 20px + 여유 12px) */
+  --check-gutter-max: 55px;  /* 넓을 때는 조금 더 여유 */
+}
+
+/* clamp 지원 브라우저에서는 뷰포트에 비례해 조금씩 변하지만 최소 여백은 유지 */
+@supports (padding-left: clamp(0px, 0vw, 0px)) {
+  .item-wrapper {
+    padding-left: clamp(var(--check-gutter-min), 6vw, var(--check-gutter-max));
+  }
+}
+
+/* 폴백: clamp 미지원 환경에서도 최소 여백 보장 */
+@supports not (padding-left: clamp(0px, 0vw, 0px)) {
+  .item-wrapper {
+    padding-left: var(--check-gutter-min);
+  }
+}
+
+/* 아이콘은 기존 위치 유지 (left: 20px) */
+.item-wrapper .item-check {
+  left: 70px; /* keep as requested */
+}
