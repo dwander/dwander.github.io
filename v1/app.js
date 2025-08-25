@@ -159,10 +159,17 @@ createApp({
         },
 
         toggleTheme() {
-            this.isDarkMode = !this.isDarkMode;
-            this._themeAutoFollow = false; // 사용자가 수동으로 변경함을 기록
-            this.showMenu = false;
-        },
+    this.isDarkMode = !this.isDarkMode;
+    this._themeAutoFollow = false; // 수동 변경
+    // 테마 저장 (별도 키)
+    localStorage.setItem("kpagChecklist:theme", this.isDarkMode ? "dark" : "light");
+    // 상태 저장(옵션) - 앱 상태에도 반영
+    try { this.saveToStorage && this.saveToStorage(); } catch (e) {}
+    // 즉시 적용
+    this.applyTheme();
+    // 드롭다운 닫기
+    this.showMenu = false;
+},
 
         applyTheme() {
             if (this.isDarkMode) {
@@ -173,24 +180,24 @@ createApp({
         },
         
         initializeTheme() {
-            // 저장된 테마가 없다면 시스템 설정 확인
-            if (this._currentData === undefined) {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                this.isDarkMode = prefersDark;
-            }
+    const saved = localStorage.getItem("kpagChecklist:theme");
+    if (saved) {
+        this.isDarkMode = saved === "dark";
+    } else {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        this.isDarkMode = prefersDark;
+    }
+    this.applyTheme();
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    mediaQuery.addEventListener("change", (e) => {
+        if (this._themeAutoFollow !== false) {
+            this.isDarkMode = e.matches;
+            localStorage.setItem("kpagChecklist:theme", this.isDarkMode ? "dark" : "light");
             this.applyTheme();
-            
-            // 시스템 테마 변경 감지
-            if (window.matchMedia) {
-                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                mediaQuery.addListener((e) => {
-                    // 사용자가 수동으로 테마를 변경하지 않은 경우에만 시스템 테마 따라가기
-                    if (this._themeAutoFollow !== false) {
-                        this.isDarkMode = e.matches;
-                    }
-                });
-            }
-        },
+        }
+    });
+},
 
         toggleUILock() {
             this.uiLocked = !this.uiLocked;
