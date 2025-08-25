@@ -1,47 +1,50 @@
 const { createApp } = Vue;
 
 createApp({
-    data(){ return { actionsAnimating: false, actionsAnimUntil: 0, pressTimers: {}, pressActive: {},
-            appTitle: '촬영 체크리스트',
-            editingTitle: false,
-            tempTitle: '',
-            showModal: false,
-            showTrashModal: false,
-            showDescriptionModal: false,
-            showStorageModal: false,
-            showPresetModal: false,
-            showHelpModal: false,
-            showMenu: false,
-            modalMode: 'add', // 'add' or 'edit'
-            modalData: { text: '', description: '' },
-            editingItem: null,
-            selectedItem: null,
-            showNumbers: false,
-            isDarkMode: false,
-            uiLocked: false,
-            trashItems: [], // 삭제된 항목들
-            storageItems: [], // 보관된 항목들
-            presets: {}, // 프리셋 저장소
-            selectedPresetSlot: null, // 선택된 프리셋 슬롯
-            sortableInstance: null,
-            activeActions: null,
-            actionTimeout: null,
-            hoverTimeout: null,
-            photoList: [
-                { id: 1, text: '신랑신부 포즈컷', description: '', completed: false },
-                { id: 2, text: '신부 포즈컷', description: '', completed: false },
-                { id: 3, text: '신랑신부 정면', description: '', completed: false },
-                { id: 4, text: '양가 혼주', description: '', completed: false },
-                { id: 5, text: '가족 친척 전체', description: '', completed: false },
-                { id: 6, text: '신랑측 직계가족', description: '', completed: false },
-                { id: 7, text: '신부측 직계가족', description: '', completed: false },
-                { id: 8, text: '직장동료 우인', description: '', completed: false },
-                { id: 9, text: '부케 던지기', description: '', completed: false },
-                { id: 10, text: '플래시 컷', description: '', completed: false }
-            ],
-            nextId: 11
-        }
-    },
+    data(){ return { 
+        actionsAnimating: false, 
+        actionsAnimUntil: 0, 
+        pressTimers: {}, 
+        pressActive: {},
+        appTitle: '촬영 체크리스트',
+        editingTitle: false,
+        tempTitle: '',
+        showModal: false,
+        showTrashModal: false,
+        showDescriptionModal: false,
+        showStorageModal: false,
+        showPresetModal: false,
+        showHelpModal: false,
+        showMenu: false,
+        modalMode: 'add', // 'add' or 'edit'
+        modalData: { text: '', description: '' },
+        editingItem: null,
+        selectedItem: null,
+        showNumbers: false,
+        isDarkMode: false,
+        uiLocked: false,
+        trashItems: [], // 삭제된 항목들
+        storageItems: [], // 보관된 항목들
+        presets: {}, // 프리셋 저장소
+        selectedPresetSlot: null, // 선택된 프리셋 슬롯
+        sortableInstance: null,
+        activeActions: null,
+        actionTimeout: null,
+        hoverTimeout: null,
+        photoList: [
+            { id: 1, text: '신랑신부 포즈컷', description: '', completed: false },
+            { id: 2, text: '신부 포즈컷', description: '', completed: false },
+            { id: 3, text: '신랑신부 정면', description: '', completed: false },
+            { id: 4, text: '양가 혼주', description: '', completed: false },
+            { id: 5, text: '가족 친척 전체', description: '', completed: false },
+            { id: 6, text: '신랑측 직계가족', description: '', completed: false },
+            { id: 7, text: '신부측 직계가족', description: '', completed: false },
+            { id: 8, text: '직장동료 우인', description: '', completed: false },
+            { id: 9, text: '부케 던지기', description: '', completed: false },
+            { id: 10, text: '플래시 컷', description: '', completed: false }
+        ],
+        nextId: 11
+    }},
     
     computed: {
         modalTitle() {
@@ -90,6 +93,101 @@ createApp({
     },
     
     methods: {
+        // === 스토리지 유틸리티 함수들 ===
+        
+        // 안전한 데이터 저장 헬퍼
+        _safeStorageSet(key, data, fallbackProperty = null) {
+            try {
+                const jsonData = JSON.stringify(data);
+                localStorage.setItem(key, jsonData);
+                
+                // fallback 데이터 보관
+                if (fallbackProperty) {
+                    this[fallbackProperty] = jsonData;
+                }
+                return true;
+            } catch (error) {
+                console.warn(`데이터 저장 실패 [${key}]:`, error);
+                return false;
+            }
+        },
+
+        // 안전한 데이터 로드 헬퍼  
+        _safeStorageGet(key, fallbackProperty = null) {
+            try {
+                const raw = localStorage.getItem(key) || 
+                           (fallbackProperty ? this[fallbackProperty] : null);
+                
+                if (!raw) return null;
+                
+                const parsed = JSON.parse(raw);
+                return parsed;
+            } catch (error) {
+                console.warn(`데이터 로드 실패 [${key}]:`, error);
+                return null;
+            }
+        },
+
+        // 데이터 유효성 검사 헬퍼
+        _validateStateData(data) {
+            if (!data || typeof data !== 'object') return false;
+            
+            // 필수 속성들 검사
+            const hasValidTitle = typeof data.appTitle === 'string';
+            const hasValidPhotoList = Array.isArray(data.photoList);
+            const hasValidTrashItems = Array.isArray(data.trashItems);
+            const hasValidStorageItems = Array.isArray(data.storageItems);
+            const hasValidNextId = typeof data.nextId === 'number';
+            
+            return hasValidTitle && hasValidPhotoList && hasValidTrashItems && 
+                   hasValidStorageItems && hasValidNextId;
+        },
+
+        // === 개선된 스토리지 메서드들 ===
+        
+        // 개선된 saveToStorage
+        saveToStorage() {
+            const data = {
+                appTitle: this.appTitle,
+                photoList: this.photoList,
+                trashItems: this.trashItems,
+                storageItems: this.storageItems,
+                nextId: this.nextId,
+                lastSaved: new Date().toISOString()
+            };
+            
+            this._safeStorageSet('kpagChecklist:state', data, '_currentData');
+        },
+
+        // 개선된 loadFromStorage
+        loadFromStorage() {
+            const data = this._safeStorageGet('kpagChecklist:state', '_currentData');
+            
+            if (!data || !this._validateStateData(data)) {
+                return; // 기본값 유지
+            }
+            
+            // 안전한 데이터 적용
+            this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
+            this.photoList = data.photoList || this.photoList;
+            this.trashItems = data.trashItems || this.trashItems;
+            this.storageItems = data.storageItems || this.storageItems;
+            this.nextId = data.nextId || this.nextId;
+        },
+
+        // 개선된 savePresets
+        savePresets() {
+            this._safeStorageSet('kpagChecklist:presets', this.presets, '_presets');
+        },
+
+        // 개선된 loadPresets  
+        loadPresets() {
+            const presets = this._safeStorageGet('kpagChecklist:presets', '_presets');
+            if (presets && typeof presets === 'object') {
+                this.presets = presets;
+            }
+        },
+
         // --- Unified actions controller ---
         openActions(itemId, ms) {
             if (this.uiLocked) return;
@@ -238,12 +336,12 @@ createApp({
 
         // UI 제어
         toggleTheme() {
-    this.isDarkMode = !this.isDarkMode;
-    this._themeAutoFollow = false;
-    try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-    this.applyTheme();
-    this.showMenu = false;
-},
+            this.isDarkMode = !this.isDarkMode;
+            this._themeAutoFollow = false;
+            try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+            this.applyTheme();
+            this.showMenu = false;
+        },
 
         applyTheme() {
             if (this.isDarkMode) {
@@ -254,45 +352,45 @@ createApp({
         },
         
         initializeTheme() {
-    const THEME_KEY = 'kpagChecklist:theme';
-    // 1) 저장된 테마 우선
-    try {
-        const saved = localStorage.getItem(THEME_KEY);
-        if (saved === 'dark' || saved === 'light') {
-            this.isDarkMode = (saved === 'dark');
-        } else {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            this.isDarkMode = !!prefersDark;
-        }
-    } catch (e) {
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        this.isDarkMode = !!prefersDark;
-    }
-    this.applyTheme();
+            const THEME_KEY = 'kpagChecklist:theme';
+            // 1) 저장된 테마 우선
+            try {
+                const saved = localStorage.getItem(THEME_KEY);
+                if (saved === 'dark' || saved === 'light') {
+                    this.isDarkMode = (saved === 'dark');
+                } else {
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    this.isDarkMode = !!prefersDark;
+                }
+            } catch (e) {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.isDarkMode = !!prefersDark;
+            }
+            this.applyTheme();
 
-    // 2) 시스템 변경 감지
-    if (window.matchMedia) {
-        const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        try {
-            mq.addEventListener('change', (e) => {
-                if (this._themeAutoFollow !== false) {
-                    this.isDarkMode = e.matches;
-                    try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                    this.applyTheme();
+            // 2) 시스템 변경 감지
+            if (window.matchMedia) {
+                const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                try {
+                    mq.addEventListener('change', (e) => {
+                        if (this._themeAutoFollow !== false) {
+                            this.isDarkMode = e.matches;
+                            try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+                            this.applyTheme();
+                        }
+                    });
+                } catch (err) {
+                    // (구형) 폴백
+                    mq.addListener((e) => {
+                        if (this._themeAutoFollow !== false) {
+                            this.isDarkMode = e.matches;
+                            try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+                            this.applyTheme();
+                        }
+                    });
                 }
-            });
-        } catch (err) {
-            // (구형) 폴백
-            mq.addListener((e) => {
-                if (this._themeAutoFollow !== false) {
-                    this.isDarkMode = e.matches;
-                    try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                    this.applyTheme();
-                }
-            });
-        }
-    }
-},
+            }
+        },
 
         toggleUILock() {
             this.uiLocked = !this.uiLocked;
@@ -681,59 +779,6 @@ createApp({
             this.editingTitle = false;
             this.tempTitle = '';
         },
-
-        // 데이터 저장/로드
-        saveToStorage() {
-    try {
-        const data = {
-            appTitle: this.appTitle,
-            photoList: this.photoList,
-            trashItems: this.trashItems,
-            storageItems: this.storageItems,
-            nextId: this.nextId,
-            lastSaved: new Date().toISOString()
-        };
-        localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
-        this._currentData = JSON.stringify(data); // fallback 유지
-    } catch (error) {
-        console.warn('현재 상태 저장 실패:', error);
-    }
-},
-
-        loadFromStorage() {
-    try {
-        const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        if (data && typeof data === 'object') {
-            this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-            this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
-            this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
-            this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
-            this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
-        }
-    } catch (error) {
-        console.warn('현재 상태 로드 실패:', error);
-    }
-},
-
-        savePresets() {
-    try {
-        localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
-        this._presets = JSON.stringify(this.presets); // fallback 유지
-    } catch (error) {
-        console.warn('프리셋 저장 실패:', error);
-    }
-},
-
-        loadPresets() {
-    try {
-        const raw = localStorage.getItem('kpagChecklist:presets') || this._presets || null;
-        if (raw) this.presets = JSON.parse(raw);
-    } catch (error) {
-        console.warn('프리셋 로드 실패:', error);
-    }
-},
 
         // 드래그 앤 드롭 초기화
         initSortable() {

@@ -126,9 +126,9 @@
                                 'item-completed': item.completed,
                                 'ui-locked': uiLocked
                             }"
-                            @touchstart="onItemTouchStart($event, item.id)"
-                            @touchend="onItemTouchEnd($event, item.id)"
-                            @touchcancel="onItemTouchEnd($event, item.id)"
+                            @touchstart.passive="onItemTouchStart($event, item.id)"
+                            @touchend.passive="onItemTouchEnd($event, item.id)"
+                            @touchcancel.passive="onItemTouchEnd($event, item.id)"
                            
                             @pointerenter="onCardPointerEnter($event, item.id)" @pointerleave="onCardPointerLeave($event, item.id)">
 
