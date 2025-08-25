@@ -52,31 +52,19 @@
                     <div v-show="showMenu" class="dropdown-menu" @click.stop>
                         <button class="dropdown-item" @click="toggleTheme">
                             <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle v-if="isDarkMode" cx="12" cy="12" r="5"></circle>
-                                <line v-if="isDarkMode" x1="12" y1="1" x2="12" y2="3"></line>
-                                <line v-if="isDarkMode" x1="12" y1="21" x2="12" y2="23"></line>
-                                <line v-if="isDarkMode" x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                                <line v-if="isDarkMode" x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                                <line v-if="isDarkMode" x1="1" y1="12" x2="3" y2="12"></line>
-                                <line v-if="isDarkMode" x1="21" y1="12" x2="23" y2="12"></line>
-                                <line v-if="isDarkMode" x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                                <line v-if="isDarkMode" x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                                <path v-if="!isDarkMode" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                                <circle v-if="!isDarkMode" cx="12" cy="12" r="5"></circle>
+                                <line v-if="!isDarkMode" x1="12" y1="1" x2="12" y2="3"></line>
+                                <line v-if="!isDarkMode" x1="12" y1="21" x2="12" y2="23"></line>
+                                <line v-if="!isDarkMode" x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line v-if="!isDarkMode" x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line v-if="!isDarkMode" x1="1" y1="12" x2="3" y2="12"></line>
+                                <line v-if="!isDarkMode" x1="21" y1="12" x2="23" y2="12"></line>
+                                <line v-if="!isDarkMode" x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line v-if="!isDarkMode" x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                                <path v-if="isDarkMode" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                             </svg>
                             {{ isDarkMode ? '라이트 모드' : '다크 모드' }}
-                        </button>
-                        <button class="dropdown-item" @click="toggleNumbers">
-                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="8" y1="6" x2="21" y2="6"></line>
-                                <line x1="8" y1="12" x2="21" y2="12"></line>
-                                <line x1="8" y1="18" x2="21" y2="18"></line>
-                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                            </svg>
-                            {{ showNumbers ? '번호 숨기기' : '번호 표시' }}
-                        </button>
-                        <button class="dropdown-item" @click="toggleUILock">
+                        </button><button class="dropdown-item" @click="toggleUILock">
                             <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                 <circle v-if="!uiLocked" cx="12" cy="7" r="4"></circle>
@@ -129,17 +117,7 @@
                     class="list-item no-select"
                     :data-id="item.id"
                 >
-                    <div class="item-wrapper">
-                        <!-- 번호 뱃지 -->
-                        <div 
-                            class="item-number-badge"
-                            :class="{ hidden: !showNumbers }"
-                        >
-                            {{ index + 1 }}
-                        </div>
-                        
-
-                        <!-- 완료 체크 아이콘 (카드 바깥, 좌측 거터) -->
+                    <div class="item-wrapper"><!-- 완료 체크 아이콘 (카드 바깥, 좌측 거터) -->
                         <div v-if="item.completed" class="item-check" aria-hidden="true">✔</div>
                         <!-- 메인 콘텐츠 -->
                         <div 

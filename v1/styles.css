@@ -1,4 +1,6 @@
 ﻿:root {
+    --badge-left: -12px; /* default badge x */
+    --badge-left-completed: -2px; /* when card is completed */
     --bg-primary: #f8f9fa;
     --bg-secondary: #ffffff;
     --bg-tertiary: #f8f9fa;
@@ -253,8 +255,7 @@ body {
 
 .item-wrapper {
     position: relative;
-    margin-left: 12px;
-}
+    }
 
 .item-card {
     cursor: move;
@@ -507,29 +508,6 @@ body {
     width: 100vw;
     height: 100vh;
     background-color: var(--modal-backdrop);
-}
-
-.item-number-badge {
-    position: absolute;
-    top: 8px;
-    left: -12px;
-    background: var(--badge-bg);
-    color: white;
-    width: 24px;
-    height: 24px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    z-index: 10;
-    transition: opacity 0.3s;
-}
-
-.item-number-badge.hidden {
-    opacity: 0;
-    pointer-events: none;
 }
 
 .menu-btn {
@@ -869,9 +847,10 @@ body {
     pointer-events: none;
 }
 
-
 /* ==== Completed item: left check icon + indent (narrower width) ==== */
 :root {
+    --badge-left: -12px; /* default badge x */
+    --badge-left-completed: -2px; /* when card is completed */
     --completed-indent: 22px; /* left shift & width reduction */
 }
 
@@ -901,7 +880,6 @@ body {
     content: none !important;
 }
 
-
 /* === Left gutter check icon outside the card === */
 .item-wrapper .item-check {
     position: absolute;
@@ -920,4 +898,9 @@ body {
 .item-card.item-completed::before,
 .item-card.item-completed::after {
     content: none !important;
+}
+
+/* When card is completed, position the number badge using left (not transform) */
+.item-wrapper:has(.item-card.item-completed) {
+    --badge-left: var(--badge-left-completed);
 }

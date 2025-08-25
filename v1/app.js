@@ -69,9 +69,7 @@ createApp({
             },
             deep: true
         },
-        showNumbers() {
-            this.saveToStorage();
-        },
+        
         isDarkMode() {
             this.saveToStorage();
             this.applyTheme();
@@ -154,19 +152,11 @@ createApp({
         },
 
         // UI 제어
-        toggleNumbers() {
-            this.showNumbers = !this.showNumbers;
+        toggleTheme() {
+            this.isDarkMode = !this.isDarkMode;
+            this._themeAutoFollow = false; // 사용자가 수동으로 변경함을 기록
             this.showMenu = false;
         },
-
-        toggleTheme() {
-    this.isDarkMode = !this.isDarkMode;
-    this._themeAutoFollow = false; // 수동 변경
-    try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch (e) {}
-    // 상태 저장은 watch(isDarkMode)에서 처리되지만, 즉시 반영을 위해 적용
-    this.applyTheme();
-    this.showMenu = false;
-},
 
         applyTheme() {
             if (this.isDarkMode) {
@@ -177,51 +167,24 @@ createApp({
         },
         
         initializeTheme() {
-    const THEME_KEY = 'kpagChecklist:theme';
-    // 1) 우선 저장된 테마 적용
-    try {
-        const saved = localStorage.getItem(THEME_KEY);
-        if (saved === 'dark' || saved === 'light') {
-            this.isDarkMode = (saved === 'dark');
-        } else {
-            // 2) 저장이 없으면 시스템 선호도
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            this.isDarkMode = !!prefersDark;
-        }
-    } catch (e) {
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        this.isDarkMode = !!prefersDark;
-    }
-    this.applyTheme();
-
-    // 3) 시스템 테마 변경 감지 (최신 API)
-    if (window.matchMedia) {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        // removeListener는 사용하지 않음: 최신 사양은 addEventListener('change', ...)
-        try {
-            mediaQuery.addEventListener('change', (e) => {
-                if (this._themeAutoFollow !== false) {
-                    this.isDarkMode = e.matches;
-                    try {
-                        localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light');
-                    } catch (err) {}
-                    this.applyTheme();
-                }
-            });
-        } catch (err) {
-            // 일부 구형 브라우저 폴백
-            mediaQuery.addListener((e) => {
-                if (this._themeAutoFollow !== false) {
-                    this.isDarkMode = e.matches;
-                    try {
-                        localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light');
-                    } catch (err2) {}
-                    this.applyTheme();
-                }
-            });
-        }
-    }
-},
+            // 저장된 테마가 없다면 시스템 설정 확인
+            if (this._currentData === undefined) {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.isDarkMode = prefersDark;
+            }
+            this.applyTheme();
+            
+            // 시스템 테마 변경 감지
+            if (window.matchMedia) {
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.addListener((e) => {
+                    // 사용자가 수동으로 테마를 변경하지 않은 경우에만 시스템 테마 따라가기
+                    if (this._themeAutoFollow !== false) {
+                        this.isDarkMode = e.matches;
+                    }
+                });
+            }
+        },
 
         toggleUILock() {
             this.uiLocked = !this.uiLocked;
@@ -525,8 +488,7 @@ createApp({
                 trashItems: JSON.parse(JSON.stringify(this.trashItems)),
                 storageItems: JSON.parse(JSON.stringify(this.storageItems)),
                 nextId: this.nextId,
-                showNumbers: this.showNumbers,
-                isDarkMode: this.isDarkMode,
+isDarkMode: this.isDarkMode,
                 themeAutoFollow: this._themeAutoFollow,
                 savedAt: new Date().toISOString()
             };
@@ -546,7 +508,6 @@ createApp({
             this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
             this.storageItems = JSON.parse(JSON.stringify(preset.storageItems));
             this.nextId = preset.nextId;
-            this.showNumbers = preset.showNumbers;
             this.isDarkMode = preset.isDarkMode !== undefined ? preset.isDarkMode : false;
             this._themeAutoFollow = preset.themeAutoFollow !== undefined ? preset.themeAutoFollow : false;
             
@@ -619,8 +580,7 @@ createApp({
             trashItems: this.trashItems,
             storageItems: this.storageItems,
             nextId: this.nextId,
-            showNumbers: this.showNumbers,
-            isDarkMode: this.isDarkMode,
+isDarkMode: this.isDarkMode,
             themeAutoFollow: this._themeAutoFollow,
             lastSaved: new Date().toISOString()
         };
@@ -642,7 +602,6 @@ createApp({
             this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
             this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
             this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
-            this.showNumbers = typeof data.showNumbers === 'boolean' ? data.showNumbers : this.showNumbers;
             this.isDarkMode = typeof data.isDarkMode === 'boolean' ? data.isDarkMode : this.isDarkMode;
             this._themeAutoFollow = typeof data.themeAutoFollow === 'boolean' ? data.themeAutoFollow : this._themeAutoFollow;
         }
