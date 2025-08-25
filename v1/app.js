@@ -90,6 +90,34 @@ createApp({
     },
     
     methods: {
+        // --- Unified actions controller ---
+        openActions(itemId, ms) {
+            if (this.uiLocked) return;
+            this.clearHoverTimeout();
+            this.clearActionTimeout();
+            this.activeActions = itemId;
+            // default auto-hide durations
+            const autoMs = (typeof ms === 'number')
+                ? ms
+                : (this.isPointerFine ? 6000 : 3000);
+            this.startActionHideTimer(autoMs);
+            // Mobile-only initial animation guard
+            if (!this.isPointerFine) {
+                this.actionsAnimating = true;
+                this.actionsAnimUntil = performance.now() + 260;
+                setTimeout(() => { this.actionsAnimating = false; }, 260);
+            }
+        },
+        closeActions() {
+            this.clearActionTimeout();
+            this.clearHoverTimeout();
+            this.activeActions = null;
+        },
+        resetActionTimer(ms) {
+            // restart auto-hide with provided ms
+            this.startActionHideTimer(ms);
+        },
+
         onCardPointerEnter(e, itemId){
             if (this.uiLocked) return;
             // Only desktop mouse should trigger hover actions
@@ -277,29 +305,20 @@ createApp({
         },
 
         // 항목 액션 버튼 제어
-        showItemActions(itemId) {
-            if (this.uiLocked) return;
-            this.clearActionTimeout();
-            this.activeActions = itemId;
-            const ms = this.isPointerFine ? 6000 : 3000; // longer on desktop
-            this.startActionHideTimer(ms);
-        },
+        showItemActions(itemId) { this.openActions(itemId); },
 
         showItemActionsOnHover(itemId) {
             if (!this.isPointerFine) return;
             if (this.uiLocked) return;
-            
-            this.clearHoverTimeout();
-            this.activeActions = itemId;
+            this.openActions(itemId, 6000);
         },
 
         hideItemActionsOnHover(itemId) {
             if (this.uiLocked) return;
-            
-            // 마우스가 벗어나면 약간의 딜레이 후 숨김
+            this.clearHoverTimeout();
             this.hoverTimeout = setTimeout(() => {
                 if (this.activeActions === itemId) {
-                    this.activeActions = null;
+                    this.closeActions();
                 }
             }, 300);
         },
