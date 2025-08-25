@@ -1,8 +1,7 @@
 const { createApp } = Vue;
 
 createApp({
-    data() {
-        return {
+    data(){ return { actionsAnimating: false, actionsAnimUntil: 0, pressTimers: {}, pressActive: {},
             appTitle: '촬영 체크리스트',
             editingTitle: false,
             tempTitle: '',
@@ -91,6 +90,63 @@ createApp({
     },
     
     methods: {
+        onCardPointerEnter(e, itemId){
+            if (this.uiLocked) return;
+            // Only desktop mouse should trigger hover actions
+            if (!(e && e.pointerType === 'mouse')) return;
+            this.showItemActionsOnHover(itemId);
+        },
+        onCardPointerLeave(e, itemId){
+            if (this.uiLocked) return;
+            if (!(e && e.pointerType === 'mouse')) return;
+            this.hideItemActionsOnHover(itemId);
+        },
+
+        guardAction(fn){
+            // Block actions on mobile while actions panel is animating in
+            if (!this.isPointerFine) {
+                if (this.actionsAnimating || (this.actionsAnimUntil && performance.now() < this.actionsAnimUntil)) {
+                    return;
+                }
+            }
+            try { fn && fn(); } catch(e) {}
+        },
+
+        onItemTouchStart(e, id){
+            
+            this.pressActive[id] = true;
+            const el = this.getCardElById(id);
+            if(el) {
+                el.classList.add('drag-arming');
+            }
+            // Haptic + show actions after 220ms if still pressing
+            if(this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
+            this.pressTimers[id] = setTimeout(() => {
+                if(this.pressActive[id]) {
+                    try { if (!this.isPointerFine) this.showItemActions(id); } catch(_){}
+                    if (navigator && navigator.vibrate) { navigator.vibrate(12); }
+                }
+            }, 220);
+        },
+        onItemTouchEnd(e, id){
+            this.pressActive[id] = false;
+            if(this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
+            const el = this.getCardElById(id);
+            // If not actively dragging, remove arming quickly
+            if(el && !el.classList.contains('dragging')) {
+                el.classList.remove('drag-arming');
+            }
+        },
+        getCardElById(id){
+            const list = this.$el.querySelectorAll('.list-item');
+            for(const li of list){
+                if(String(li.getAttribute('data-id')) === String(id)){
+                    return li.querySelector('.item-card');
+                }
+            }
+            return null;
+        },
+    
         // 항목 추가 관련
         showAddInput() {
             if (this.uiLocked) return;
@@ -230,6 +286,7 @@ createApp({
         },
 
         showItemActionsOnHover(itemId) {
+            if (!this.isPointerFine) return;
             if (this.uiLocked) return;
             
             this.clearHoverTimeout();
@@ -661,8 +718,7 @@ createApp({
 
         // 드래그 앤 드롭 초기화
         initSortable() {
-            // ref 호환성 확보: photoListEl 우선, 없으면 photoList로 폴백
-            const el = this.$refs.photoListEl || this.$refs.photoList;
+            const el = this.$refs.photoListEl;
             if (el && typeof Sortable !== 'undefined') {
                 if (this.sortableInstance) {
                     this.sortableInstance.destroy();
@@ -673,17 +729,12 @@ createApp({
                     ghostClass: 'sortable-ghost',
                     forceFallback: true,
                     fallbackTolerance: 3,
-                    touchStartThreshold: 10,
-                    delay: 100,
-                    delayOnTouchStart: true,
-                    onStart: function() {
-                        document.body.style.overflow = 'hidden';
-                    },
-                    onEnd: (evt) => {
-                        document.body.style.overflow = '';
-                        const item = this.photoList.splice(evt.oldIndex, 1)[0];
-                        this.photoList.splice(evt.newIndex, 0, item);
-                    }
+                    touchStartThreshold: 6,
+                    delay: 220,
+                    delayOnTouchOnly: true,
+                    onStart: (evt) => { document.body.style.overflow = 'hidden'; try { const id = evt.item && evt.item.dataset && evt.item.dataset.id; const el = this.getCardElById(id); if (el) { el.classList.add('dragging'); el.classList.remove('drag-arming'); 
+        } } catch(_){} },
+                    onEnd: (evt) => { document.body.style.overflow = ''; try { const id = evt.item && evt.item.dataset && evt.item.dataset.id; const el = this.getCardElById(id); if (el) { el.classList.remove('dragging'); el.classList.remove('drag-arming'); } } catch(_){} const item = this.photoList.splice(evt.oldIndex, 1)[0]; this.photoList.splice(evt.newIndex, 0, item); }
                 });
             }
         }
