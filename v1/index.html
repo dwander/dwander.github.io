@@ -127,7 +127,8 @@
                                 'item-completed': item.completed,
                                 'ui-locked': uiLocked
                             }"
-                            @click="!uiLocked ? toggleComplete(item) : null"
+                            @mouseenter="!uiLocked ? showItemActionsOnHover(item.id) : null"
+                            @touchstart="!uiLocked ? showItemActions(item.id) : null" @mouseleave="!uiLocked ? hideItemActionsOnHover(item.id) : null"
                         >
                             <div class="d-flex align-items-center">
                                 <!-- 텍스트 영역 -->
@@ -135,16 +136,14 @@
                                     <div 
                                         class="text-editable" 
                                         :class="{ 'ui-locked': uiLocked }"
-                                        @click.stop="!uiLocked ? showItemActions(item.id) : null"
-                                        @mouseenter="!uiLocked ? showItemActionsOnHover(item.id) : null"
-                                        @mouseleave="!uiLocked ? hideItemActionsOnHover(item.id) : null"
+                                        @click.stop="!uiLocked ? toggleComplete(item) : null"
                                     >
                                         <div class="item-title d-flex align-items-center">
                                             {{ item.text }}
                                             <div 
                                                 :id="'actions-' + item.id"
                                                 class="item-actions"
-                                                :class="{ visible: activeActions === item.id }"
+                                                :class="{ visible: activeActions === item.id }" @mouseenter="onActionsEnter" @mouseleave="onActionsLeave"
                                             >
                                                 <div 
                                                     class="item-action-btn"

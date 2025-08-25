@@ -80,6 +80,7 @@ createApp({
     },
     
     mounted() {
+        this.isPointerFine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
         this.loadFromStorage();
         this.loadPresets();
         this.initializeTheme();
@@ -222,14 +223,10 @@ createApp({
         // 항목 액션 버튼 제어
         showItemActions(itemId) {
             if (this.uiLocked) return;
-            
             this.clearActionTimeout();
             this.activeActions = itemId;
-            
-            // 3초 후 자동으로 숨김
-            this.actionTimeout = setTimeout(() => {
-                this.activeActions = null;
-            }, 3000);
+            const ms = this.isPointerFine ? 6000 : 3000; // longer on desktop
+            this.startActionHideTimer(ms);
         },
 
         showItemActionsOnHover(itemId) {
@@ -250,11 +247,30 @@ createApp({
             }, 300);
         },
 
+        startActionHideTimer(ms) {
+            this.clearActionTimeout();
+            if (this.keepActions) return; // do not start if hovering over actions
+            this.actionTimeout = setTimeout(() => {
+                if (!this.keepActions) this.activeActions = null;
+            }, ms);
+        },
+
         clearActionTimeout() {
             if (this.actionTimeout) {
                 clearTimeout(this.actionTimeout);
                 this.actionTimeout = null;
             }
+        },
+
+        onActionsEnter() {
+            this.keepActions = true;
+            this.clearActionTimeout();
+        },
+
+        onActionsLeave() {
+            this.keepActions = false;
+            // after leaving actions, start a shorter grace period
+            this.startActionHideTimer(this.isPointerFine ? 1800 : 1200);
         },
 
         clearHoverTimeout() {
@@ -645,7 +661,8 @@ createApp({
 
         // 드래그 앤 드롭 초기화
         initSortable() {
-            const el = this.$refs.photoListEl;
+            // ref 호환성 확보: photoListEl 우선, 없으면 photoList로 폴백
+            const el = this.$refs.photoListEl || this.$refs.photoList;
             if (el && typeof Sortable !== 'undefined') {
                 if (this.sortableInstance) {
                     this.sortableInstance.destroy();

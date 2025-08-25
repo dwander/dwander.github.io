@@ -274,7 +274,7 @@ body {
 
 .item-card.item-completed {
     transform: scale(0.95);
-    opacity: 0.6;
+    opacity: 0.45;
 }
 
 .item-card:hover {
@@ -307,9 +307,7 @@ body {
     min-height: 16px;
 }
 
-.text-editable:hover {
-    color: var(--accent-blue) !important;
-    background: var(--accent-blue-bg);
+.text-editable:hover { /* hover highlight removed per request */ 
 }
 
 .text-editable.ui-locked {
@@ -349,10 +347,10 @@ body {
     color: var(--accent-blue-hover);
 }
 
-.item-actions {
+.item-actions { position:absolute; top:0.5rem; right:0.5rem;
     display: none;
     gap: 6px;
-    margin-left: 12px;
+    
     align-items: center;
 }
 
@@ -373,8 +371,7 @@ body {
 }
 
 .item-action-btn {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    border: 0px solid var(--border-color);
     width: 32px;
     height: 32px;
     border-radius: 6px;
@@ -383,7 +380,6 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: all 0.15s;
-    box-shadow: 0 1px 3px var(--shadow-light);
     color: var(--text-primary);
 }
 
@@ -393,8 +389,8 @@ body {
 }
 
 .action-icon {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
@@ -747,6 +743,7 @@ body {
 }
 
 @media (max-width: 768px) {
+
     .content-wrapper {
         padding: 0.25rem 0.5rem;
     }
@@ -770,8 +767,8 @@ body {
     }
     
     .action-icon {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
     }
 }
 
@@ -843,7 +840,7 @@ body {
 :root {
     --badge-left: -12px; /* default badge x */
     --badge-left-completed: -2px; /* when card is completed */
-    --completed-indent: 22px; /* left shift & width reduction */
+    --completed-indent: 0.5rem; /* left shift & width reduction */
 }
 
 .item-card.item-completed {
@@ -851,7 +848,7 @@ body {
     margin-left: var(--completed-indent);
     width: calc(100% - var(--completed-indent));
     padding-left: 2.25rem; /* room for left check icon */
-    opacity: 1;
+    opacity: 0.65;
 }
 
 
@@ -866,8 +863,6 @@ body {
     top: 50%;
     transform: translateY(-50%);
     font-size: 1.25rem;
-    line-
-opacity: 0.25;
     pointer-events: none;
     z-index: 9; /* under number badge (z-index:10) */
 }
@@ -899,4 +894,7 @@ opacity: 0.25;
 /* 아이콘은 기존 위치 유지 (left: 20px) */
 .item-wrapper .item-check {
   left: 15px; /* keep as requested */
+  opacity: 0.35;
 }
+
+.text-editable:focus { outline: none; box-shadow: none; }
