@@ -581,65 +581,62 @@ createApp({
 
         // 데이터 저장/로드
         saveToStorage() {
-            try {
-                const data = {
-                    appTitle: this.appTitle,
-                    photoList: this.photoList,
-                    trashItems: this.trashItems,
-                    storageItems: this.storageItems,
-                    nextId: this.nextId,
-                    showNumbers: this.showNumbers,
-                    isDarkMode: this.isDarkMode,
-                    themeAutoFollow: this._themeAutoFollow,
-                    lastSaved: new Date().toISOString()
-                };
-                // 브라우저 스토리지 없이 메모리에만 저장
-                this._currentData = JSON.stringify(data);
-            } catch (error) {
-                console.warn('현재 상태 저장 실패:', error);
-            }
-        },
+    try {
+        const data = {
+            appTitle: this.appTitle,
+            photoList: this.photoList,
+            trashItems: this.trashItems,
+            storageItems: this.storageItems,
+            nextId: this.nextId,
+            showNumbers: this.showNumbers,
+            isDarkMode: this.isDarkMode,
+            themeAutoFollow: this._themeAutoFollow,
+            lastSaved: new Date().toISOString()
+        };
+        localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
+        this._currentData = JSON.stringify(data); // 유지: 기존 내부 변수도 갱신(백워드 호환)
+    } catch (error) {
+        console.warn('저장 실패:', error);
+    }
+},
 
         loadFromStorage() {
-            try {
-                if (this._currentData) {
-                    const data = JSON.parse(this._currentData);
-                    if (data.photoList && Array.isArray(data.photoList)) {
-                        this.appTitle = data.appTitle || '촬영 체크리스트';
-                        this.photoList = data.photoList;
-                        this.trashItems = data.trashItems || [];
-                        this.storageItems = data.storageItems || [];
-                        this.nextId = data.nextId || this.nextId;
-                        this.showNumbers = data.showNumbers !== undefined ? data.showNumbers : false;
-                        this.isDarkMode = data.isDarkMode !== undefined ? data.isDarkMode : false;
-                        this._themeAutoFollow = data.themeAutoFollow !== undefined ? data.themeAutoFollow : true;
-                        console.log('현재 상태 복원 완료:', data.lastSaved);
-                    }
-                }
-            } catch (error) {
-                console.warn('현재 상태 로드 실패:', error);
-            }
-        },
+    try {
+        const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
+        if (!raw) return;
+        const data = JSON.parse(raw);
+
+        this.appTitle = data.appTitle || this.appTitle;
+        this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
+        this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
+        this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
+        this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
+        this.showNumbers = typeof data.showNumbers === 'boolean' ? data.showNumbers : this.showNumbers;
+        this.isDarkMode = typeof data.isDarkMode === 'boolean' ? data.isDarkMode : this.isDarkMode;
+        this._themeAutoFollow = typeof data.themeAutoFollow === 'boolean' ? data.themeAutoFollow : this._themeAutoFollow;
+    } catch (error) {
+        console.warn('로드 실패:', error);
+    }
+},
 
         savePresets() {
-            try {
-                const data = JSON.stringify(this.presets);
-                // 브라우저 스토리지 없이 메모리에만 저장
-                this._presets = data;
-            } catch (error) {
-                console.warn('프리셋 저장 실패:', error);
-            }
-        },
+    try {
+        localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
+        this._presets = JSON.stringify(this.presets); // 유지: 내부 변수도 갱신
+    } catch (error) {
+        console.warn('프리셋 저장 실패:', error);
+    }
+},
 
         loadPresets() {
-            try {
-                if (this._presets) {
-                    this.presets = JSON.parse(this._presets);
-                }
-            } catch (error) {
-                console.warn('프리셋 로드 실패:', error);
-            }
-        },
+    try {
+        const raw = localStorage.getItem('kpagChecklist:presets') || this._presets || null;
+        if (!raw) return;
+        this.presets = JSON.parse(raw);
+    } catch (error) {
+        console.warn('프리셋 로드 실패:', error);
+    }
+},
 
         // 드래그 앤 드롭 초기화
         initSortable() {
