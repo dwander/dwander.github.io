@@ -150,6 +150,7 @@ createApp({
         // 체크박스 토글
         toggleComplete(item) {
             item.completed = !item.completed;
+            try { this.saveToStorage && this.saveToStorage(); } catch (e) {}
         },
 
         // UI 제어
@@ -161,13 +162,9 @@ createApp({
         toggleTheme() {
     this.isDarkMode = !this.isDarkMode;
     this._themeAutoFollow = false; // 수동 변경
-    // 테마 저장 (별도 키)
-    localStorage.setItem("kpagChecklist:theme", this.isDarkMode ? "dark" : "light");
-    // 상태 저장(옵션) - 앱 상태에도 반영
-    try { this.saveToStorage && this.saveToStorage(); } catch (e) {}
-    // 즉시 적용
+    try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch (e) {}
+    // 상태 저장은 watch(isDarkMode)에서 처리되지만, 즉시 반영을 위해 적용
     this.applyTheme();
-    // 드롭다운 닫기
     this.showMenu = false;
 },
 
@@ -180,23 +177,50 @@ createApp({
         },
         
         initializeTheme() {
-    const saved = localStorage.getItem("kpagChecklist:theme");
-    if (saved) {
-        this.isDarkMode = saved === "dark";
-    } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        this.isDarkMode = prefersDark;
+    const THEME_KEY = 'kpagChecklist:theme';
+    // 1) 우선 저장된 테마 적용
+    try {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === 'dark' || saved === 'light') {
+            this.isDarkMode = (saved === 'dark');
+        } else {
+            // 2) 저장이 없으면 시스템 선호도
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            this.isDarkMode = !!prefersDark;
+        }
+    } catch (e) {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        this.isDarkMode = !!prefersDark;
     }
     this.applyTheme();
 
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener("change", (e) => {
-        if (this._themeAutoFollow !== false) {
-            this.isDarkMode = e.matches;
-            localStorage.setItem("kpagChecklist:theme", this.isDarkMode ? "dark" : "light");
-            this.applyTheme();
+    // 3) 시스템 테마 변경 감지 (최신 API)
+    if (window.matchMedia) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        // removeListener는 사용하지 않음: 최신 사양은 addEventListener('change', ...)
+        try {
+            mediaQuery.addEventListener('change', (e) => {
+                if (this._themeAutoFollow !== false) {
+                    this.isDarkMode = e.matches;
+                    try {
+                        localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light');
+                    } catch (err) {}
+                    this.applyTheme();
+                }
+            });
+        } catch (err) {
+            // 일부 구형 브라우저 폴백
+            mediaQuery.addListener((e) => {
+                if (this._themeAutoFollow !== false) {
+                    this.isDarkMode = e.matches;
+                    try {
+                        localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light');
+                    } catch (err2) {}
+                    this.applyTheme();
+                }
+            });
         }
-    });
+    }
 },
 
         toggleUILock() {
@@ -601,9 +625,9 @@ createApp({
             lastSaved: new Date().toISOString()
         };
         localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
-        this._currentData = JSON.stringify(data); // 유지: 기존 내부 변수도 갱신(백워드 호환)
+        this._currentData = JSON.stringify(data); // fallback 유지
     } catch (error) {
-        console.warn('저장 실패:', error);
+        console.warn('현재 상태 저장 실패:', error);
     }
 },
 
@@ -612,24 +636,25 @@ createApp({
         const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
         if (!raw) return;
         const data = JSON.parse(raw);
-
-        this.appTitle = data.appTitle || this.appTitle;
-        this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
-        this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
-        this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
-        this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
-        this.showNumbers = typeof data.showNumbers === 'boolean' ? data.showNumbers : this.showNumbers;
-        this.isDarkMode = typeof data.isDarkMode === 'boolean' ? data.isDarkMode : this.isDarkMode;
-        this._themeAutoFollow = typeof data.themeAutoFollow === 'boolean' ? data.themeAutoFollow : this._themeAutoFollow;
+        if (data && typeof data === 'object') {
+            this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
+            this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
+            this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
+            this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
+            this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
+            this.showNumbers = typeof data.showNumbers === 'boolean' ? data.showNumbers : this.showNumbers;
+            this.isDarkMode = typeof data.isDarkMode === 'boolean' ? data.isDarkMode : this.isDarkMode;
+            this._themeAutoFollow = typeof data.themeAutoFollow === 'boolean' ? data.themeAutoFollow : this._themeAutoFollow;
+        }
     } catch (error) {
-        console.warn('로드 실패:', error);
+        console.warn('현재 상태 로드 실패:', error);
     }
 },
 
         savePresets() {
     try {
         localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
-        this._presets = JSON.stringify(this.presets); // 유지: 내부 변수도 갱신
+        this._presets = JSON.stringify(this.presets); // fallback 유지
     } catch (error) {
         console.warn('프리셋 저장 실패:', error);
     }
@@ -638,8 +663,7 @@ createApp({
         loadPresets() {
     try {
         const raw = localStorage.getItem('kpagChecklist:presets') || this._presets || null;
-        if (!raw) return;
-        this.presets = JSON.parse(raw);
+        if (raw) this.presets = JSON.parse(raw);
     } catch (error) {
         console.warn('프리셋 로드 실패:', error);
     }

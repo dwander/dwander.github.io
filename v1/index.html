@@ -138,6 +138,9 @@
                             {{ index + 1 }}
                         </div>
                         
+
+                        <!-- 완료 체크 아이콘 (카드 바깥, 좌측 거터) -->
+                        <div v-if="item.completed" class="item-check" aria-hidden="true">✔</div>
                         <!-- 메인 콘텐츠 -->
                         <div 
                             class="bg-white border rounded-2 item-card item-clickable"
@@ -149,17 +152,6 @@
                             @click="!uiLocked ? toggleComplete(item) : null"
                         >
                             <div class="d-flex align-items-center">
-                                <!-- 체크박스 -->
-                                <div class="me-2" style="margin-left: 8px;">
-                                    <input 
-                                        type="checkbox" 
-                                        :checked="item.completed"
-                                        @click.stop="toggleComplete(item)"
-                                        class="form-check-input"
-                                        style="width: 18px; height: 18px;"
-                                    >
-                                </div>
-                                
                                 <!-- 텍스트 영역 -->
                                 <div class="flex-fill me-3">
                                     <div 
@@ -353,7 +345,7 @@
             </div>
 
             <!-- 보관소 모달 -->
-            <div v-if="showStorageModal" class="trash-modal">
+            <div v-if="showStorageModal" class="storage-modal">
                 <div class="card shadow">
                     <div class="card-header">
                         <h6 class="card-title mb-0">임시 보관소 ({{ storageItems.length }}개)</h6>

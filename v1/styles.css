@@ -433,7 +433,7 @@ body {
     max-width: calc(100vw - 2rem);
 }
 
-.trash-modal {
+.trash-modal, .storage-modal {
     position: fixed;
     top: 25%;
     left: 50%;
@@ -850,4 +850,74 @@ body {
 
 [data-theme="dark"] .text-muted {
     color: var(--text-muted) !important;
+}
+/* 체크리스트: 체크박스 제거 → 우측 배경 체크 아이콘 표시 */
+.item-card { 
+    position: relative; /* ::after를 위한 기준 */
+}
+
+.item-card.item-completed::before /* converted from ::after */ {
+    content: "✔";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--text-primary);
+    opacity: 0.22; /* 배경같이 은은하게 */
+    pointer-events: none;
+}
+
+
+/* ==== Completed item: left check icon + indent (narrower width) ==== */
+:root {
+    --completed-indent: 22px; /* left shift & width reduction */
+}
+
+.item-card.item-completed {
+    /* visually narrower: push to the right and shrink width */
+    margin-left: var(--completed-indent);
+    width: calc(100% - var(--completed-indent));
+    padding-left: 2.25rem; /* room for left check icon */
+    opacity: 1;
+}
+
+.item-card.item-completed::before {
+    content: "✔";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--text-primary);
+    opacity: 0.25; /* subtle background look */
+    pointer-events: none;
+}
+
+/* Ensure any residual right-side icon is gone if present */
+.item-card.item-completed::after {
+    content: none !important;
+}
+
+
+/* === Left gutter check icon outside the card === */
+.item-wrapper .item-check {
+    position: absolute;
+    left: 20px; /* further left than number badge (-12px) */
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--text-primary);
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: 9; /* under number badge (z-index:10) */
+}
+
+/* Remove any previous pseudo-element checks on the card itself */
+.item-card.item-completed::before,
+.item-card.item-completed::after {
+    content: none !important;
 }
