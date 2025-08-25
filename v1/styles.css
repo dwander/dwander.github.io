@@ -898,5 +898,5 @@ opacity: 0.25;
 
 /* 아이콘은 기존 위치 유지 (left: 20px) */
 .item-wrapper .item-check {
-  left: 20px; /* keep as requested */
+  left: 15px; /* keep as requested */
 }
