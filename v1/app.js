@@ -41,7 +41,8 @@ createApp({
                 { id: 9, text: '부케 던지기', description: '', completed: false },
                 { id: 10, text: '플래시 컷', description: '', completed: false }
             ],
-            nextId: 11
+            nextId: 11,
+            touches: {}
         }
     },
     
@@ -139,6 +140,13 @@ createApp({
         onItemTouchStart(e, id){
             
             this.pressActive[id] = true;
+            try {
+                const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+                if (t) {
+                    this.touches[id] = { sx: t.clientX, sy: t.clientY, toggled: false };
+                }
+            } catch(_) {}
+
             const el = this.getCardElById(id);
             if(el) {
                 el.classList.add('drag-arming');
@@ -152,8 +160,58 @@ createApp({
                 }
             }, 220);
         },
+        
+		onItemTouchMove(e, item){
+			if (this.uiLocked) return;
+			if (this.isPointerFine) return;
+			const id = item && item.id;
+			const state = this.touches[id] || {};
+			const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+			if (!t) return;
+			const dx = t.clientX - (state.sx || 0);
+			const dy = t.clientY - (state.sy || 0);
+			const el = this.getCardElById(id);
+
+			// 길게 누름 취소
+			if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+				if (this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
+				this.pressActive[id] = false;
+			}
+
+			// 수평 제스처
+			const hori = Math.abs(dx) >= 12 && Math.abs(dx) > Math.abs(dy) * 1.5;
+			if (el) {
+				const tx = Math.max(-72, Math.min(dx, 72));
+				el.style.transform = `translateX(${tx}px)`;
+			}
+
+			// 오른쪽 스와이프 → 체크 완료
+			if (hori && dx > 42 && !state.toggled && !item.completed) {
+				this.toggleComplete(item);
+				state.toggled = true;
+				this.touches[id] = state;
+				try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
+			}
+
+			// 왼쪽 스와이프 → 체크 해제
+			if (hori && dx < -42 && !state.toggled && item.completed) {
+				this.toggleComplete(item);
+				state.toggled = true;
+				this.touches[id] = state;
+				try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
+			}
+		},
+
         onItemTouchEnd(e, id){
             this.pressActive[id] = false;
+            try {
+                const el = this.getCardElById(id);
+                if (el) {
+                    el.style.transform = '';
+                }
+                if (this.touches[id]) delete this.touches[id];
+            } catch(_) {}
+
             if(this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
             const el = this.getCardElById(id);
             // If not actively dragging, remove arming quickly
@@ -226,6 +284,16 @@ createApp({
             this.cancelModal();
         },
 
+
+// 제목 클릭(데스크탑 전용)
+clickTitle(item, e){
+    if (this.uiLocked) return;
+    if (this.isPointerFine) {
+        this.toggleComplete(item);
+    } else {
+        // 모바일에선 클릭 무시
+    }
+},
         // 체크박스 토글
         toggleComplete(item) {
             item.completed = !item.completed;

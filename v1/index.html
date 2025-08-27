@@ -119,6 +119,7 @@
                             @touchstart="onItemTouchStart($event, item.id)"
                             @touchend="onItemTouchEnd($event, item.id)"
                             @touchcancel="onItemTouchEnd($event, item.id)"
+                            @touchmove="onItemTouchMove($event, item)"
                            
                             @pointerenter="onCardPointerEnter($event, item.id)" @pointerleave="onCardPointerLeave($event, item.id)">
 
@@ -128,7 +129,7 @@
                                     <div 
                                         class="text-editable" 
                                         :class="{ 'ui-locked': uiLocked }"
-                                        @click.stop="!uiLocked ? toggleComplete(item) : null"
+                                        @click.stop="clickTitle(item, $event)"
                                     >
                                         <div class="item-title d-flex align-items-center">
                                             <span v-if="item.completed" class="item-check me-2" aria-hidden="true">✔</span>{{ item.text }}
