@@ -406,9 +406,7 @@ createApp({
         },
         
         initializeTheme() {
-            const THEME_KEY = 'checklist:theme';
-            const LEGACY_THEME_KEY = 'kpagChecklist:theme';
-            try {
+            const THEME_KEY = 'checklist:theme';try {
                 let saved = localStorage.getItem(THEME_KEY);
                 if (!saved) saved = localStorage.getItem(LEGACY_THEME_KEY);
                 if (saved === 'dark' || saved === 'light') {
@@ -596,7 +594,7 @@ createApp({
             const slotNumber = this.selectedPresetSlot;
             const preset = this.presets[this.selectedPresetSlot];
             this.appTitle = preset.title;
-            this.items = JSON.parse(JSON.stringify(preset.items || preset.photoList || []));
+            this.items = JSON.parse(JSON.stringify(preset.items || preset.items || []));
             this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
             this.nextId = preset.nextId;
             
@@ -666,15 +664,13 @@ createApp({
 
         loadFromStorage() {
             try {
-                const raw = localStorage.getItem('checklist:state')
-                    || localStorage.getItem('kpagChecklist:state')
-                    || this._currentData || null;
+                const raw = localStorage.getItem('checklist:state') || this._currentData || null;
                 if (!raw) return;
                 const data = JSON.parse(raw);
                 if (data && typeof data === 'object') {
                     this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
                     this.items = Array.isArray(data.items) ? data.items
-                        : (Array.isArray(data.photoList) ? data.photoList : this.items);
+                        : (Array.isArray(data.items) ? data.items : this.items);
                     this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
                     this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
                 }
