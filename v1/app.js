@@ -1,7 +1,12 @@
 const { createApp } = Vue;
 
 createApp({
-    data(){ return { actionsAnimating: false, actionsAnimUntil: 0, pressTimers: {}, pressActive: {},
+    data(){ 
+		return { 
+			actionsAnimating: false,
+			actionsAnimUntil: 0,
+			pressTimers: {},
+			pressActive: {},
             appTitle: '촬영 체크리스트',
             editingTitle: false,
             tempTitle: '',
@@ -10,13 +15,12 @@ createApp({
             showDescriptionModal: false,
             showStorageModal: false,
             showPresetModal: false,
-            showHelpModal: false,
-            showMenu: false,
-            keepActions: false,
+			showMenu: false,
             modalMode: 'add', // 'add' or 'edit'
             modalData: { text: '', description: '' },
             editingItem: null,
             selectedItem: null,
+            showNumbers: false,
             isDarkMode: false,
             uiLocked: false,
             trashItems: [], // 삭제된 항목들
@@ -52,29 +56,29 @@ createApp({
     watch: {
         photoList: {
             handler() {
-                this.saveToStorageDebounced();
+                this.saveToStorage();
             },
             deep: true
         },
         trashItems: {
             handler() {
-                this.saveToStorageDebounced();
+                this.saveToStorage();
             },
             deep: true
         },
         storageItems: {
             handler() {
-                this.saveToStorageDebounced();
+                this.saveToStorage();
             },
             deep: true
         },
         
         isDarkMode() {
-            this.saveToStorageDebounced();
+            this.saveToStorage();
             this.applyTheme();
         },
         appTitle() {
-            this.saveToStorageDebounced();
+            this.saveToStorage();
         }
     },
     
@@ -90,6 +94,8 @@ createApp({
     },
     
     methods: {
+    openHelpModal(){ this.showHelpModal = true; this.showMenu = false; },
+    closeHelpModal(){ this.showHelpModal = false; },
         // --- Unified actions controller ---
         openActions(itemId, ms) {
             if (this.uiLocked) return;
@@ -233,16 +239,17 @@ createApp({
         // 체크박스 토글
         toggleComplete(item) {
             item.completed = !item.completed;
-            this.saveToStorageDebounced();},
+            try { this.saveToStorage && this.saveToStorage(); } catch (e) {}
+        },
 
         // UI 제어
         toggleTheme() {
-    this.isDarkMode = !this.isDarkMode;
-    this._themeAutoFollow = false;
-    try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-    this.applyTheme();
-    this.showMenu = false;
-},
+			this.isDarkMode = !this.isDarkMode;
+			this._themeAutoFollow = false;
+			try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+			this.applyTheme();
+			this.showMenu = false;
+		},
 
         applyTheme() {
             if (this.isDarkMode) {
@@ -253,45 +260,45 @@ createApp({
         },
         
         initializeTheme() {
-    const THEME_KEY = 'kpagChecklist:theme';
-    // 1) 저장된 테마 우선
-    try {
-        const saved = localStorage.getItem(THEME_KEY);
-        if (saved === 'dark' || saved === 'light') {
-            this.isDarkMode = (saved === 'dark');
-        } else {
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            this.isDarkMode = !!prefersDark;
-        }
-    } catch (e) {
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        this.isDarkMode = !!prefersDark;
-    }
-    this.applyTheme();
+			const THEME_KEY = 'kpagChecklist:theme';
+			// 1) 저장된 테마 우선
+			try {
+				const saved = localStorage.getItem(THEME_KEY);
+				if (saved === 'dark' || saved === 'light') {
+					this.isDarkMode = (saved === 'dark');
+				} else {
+					const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+					this.isDarkMode = !!prefersDark;
+				}
+			} catch (e) {
+				const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+				this.isDarkMode = !!prefersDark;
+			}
+			this.applyTheme();
 
-    // 2) 시스템 변경 감지
-    if (window.matchMedia) {
-        const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        try {
-            mq.addEventListener('change', (e) => {
-                if (this._themeAutoFollow !== false) {
-                    this.isDarkMode = e.matches;
-                    try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                    this.applyTheme();
-                }
-            });
-        } catch (err) {
-            // (구형) 폴백
-            mq.addListener((e) => {
-                if (this._themeAutoFollow !== false) {
-                    this.isDarkMode = e.matches;
-                    try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                    this.applyTheme();
-                }
-            });
-        }
-    }
-},
+			// 2) 시스템 변경 감지
+			if (window.matchMedia) {
+				const mq = window.matchMedia('(prefers-color-scheme: dark)');
+				try {
+					mq.addEventListener('change', (e) => {
+						if (this._themeAutoFollow !== false) {
+							this.isDarkMode = e.matches;
+							try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+							this.applyTheme();
+						}
+					});
+				} catch (err) {
+					// (구형) 폴백
+					mq.addListener((e) => {
+						if (this._themeAutoFollow !== false) {
+							this.isDarkMode = e.matches;
+							try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+							this.applyTheme();
+						}
+					});
+				}
+			}
+		},
 
         toggleUILock() {
             this.uiLocked = !this.uiLocked;
@@ -378,21 +385,20 @@ createApp({
             const item = this.photoList.find(item => item.id === id);
             if (!item) return;
             
-            // 보관소 버튼 ripple 애니메이션
+            // 보관소 '원(링)' bounce 애니메이션 (버튼 ::before를 애니메이션)
             const storageBtn = document.querySelector('.storage-btn');
             if (storageBtn) {
-                document.body.style.overflow = 'hidden';
-                
-                storageBtn.classList.add('ripple');
-                setTimeout(() => {
-                    storageBtn.classList.remove('ripple');
-                    document.body.style.overflow = '';
-                }, 2400);
-            }
+                storageBtn.classList.remove('ring-bounce');
+                void storageBtn.offsetWidth; // 강제 리플로우
+                storageBtn.classList.add('ring-bounce');
+                window.setTimeout(() => {
+                    storageBtn.classList.remove('ring-bounce');
+                }, 600);
+            } 
             
             // 애니메이션을 위해 요소에 클래스 추가
-            const element = document.querySelector(`[data-id="${id}"]`);
-            if (element) {
+            const element = this.getCardElById(id);
+			if (element) {
                 element.classList.add('item-deleting');
                 
                 // 애니메이션 완료 후 실제 이동
@@ -430,7 +436,7 @@ createApp({
             
             // 리스트 맨 아래에 추가
             const restoredItem = {
-                id: this.nextId++,
+                id: storageItem.id,
                 text: storageItem.text,
                 description: storageItem.description,
                 completed: false // 복구시 체크 해제 상태로
@@ -439,8 +445,8 @@ createApp({
             this.photoList.push(restoredItem);
             
             // 짧은 피드백
-            const element = document.querySelector(`[data-id="${storageItem.id}"]`);
-            if (element) {
+            const element = this.getCardElById(storageItem.id);
+			if (element) {
                 element.style.animation = 'fadeIn 0.5s ease';
             }
         },
@@ -473,21 +479,20 @@ createApp({
             const item = this.photoList.find(item => item.id === id);
             if (!item) return;
             
-            // 휴지통 버튼 ripple 애니메이션
+            // 휴지통 '원(링)' bounce 애니메이션 (버튼 ::before를 애니메이션)
             const trashBtn = document.querySelector('.trash-btn');
             if (trashBtn) {
-                document.body.style.overflow = 'hidden';
-                
-                trashBtn.classList.add('ripple');
-                setTimeout(() => {
-                    trashBtn.classList.remove('ripple');
-                    document.body.style.overflow = '';
-                }, 2400);
+                trashBtn.classList.remove('ring-bounce');
+                void trashBtn.offsetWidth; // 강제 리플로우
+                trashBtn.classList.add('ring-bounce');
+                window.setTimeout(() => {
+                    trashBtn.classList.remove('ring-bounce');
+                }, 600);
             }
             
             // 애니메이션을 위해 요소에 클래스 추가
-            const element = document.querySelector(`[data-id="${id}"]`);
-            if (element) {
+            const element = this.getCardElById(id);
+			if (element) {
                 element.classList.add('item-deleting');
                 
                 // 애니메이션 완료 후 실제 삭제
@@ -525,7 +530,7 @@ createApp({
             
             // 리스트 맨 아래에 추가
             const restoredItem = {
-                id: this.nextId++,
+                id: trashItem.id,
                 text: trashItem.text,
                 description: trashItem.description,
                 completed: false // 복구시 체크 해제 상태로
@@ -534,8 +539,8 @@ createApp({
             this.photoList.push(restoredItem);
             
             // 짧은 피드백
-            const element = document.querySelector(`[data-id="${trashItem.id}"]`);
-            if (element) {
+            const element = this.getCardElById(trashItem.id);
+			if (element) {
                 element.style.animation = 'fadeIn 0.5s ease';
             }
         },
@@ -554,7 +559,7 @@ createApp({
             this.showDescriptionModal = false;
             this.showStorageModal = false;
             this.showPresetModal = false;
-            this.showHelpModal = false;
+            
             this.showMenu = false;
             this.selectedItem = null;
             this.selectedPresetSlot = null;
@@ -637,16 +642,6 @@ createApp({
             }
         },
 
-        // 도움말
-        openHelpModal() {
-            this.showHelpModal = true;
-            this.showMenu = false;
-        },
-
-        closeHelpModal() {
-            this.showHelpModal = false;
-        },
-
         // 기타 유틸리티
         resetAll() {
             this.photoList.forEach(item => {
@@ -699,28 +694,22 @@ createApp({
 			}
 		},
 
-        saveToStorageDebounced(delay = 250) {
-            clearTimeout(this._saveTimer);
-            this._saveTimer = setTimeout(() => this.saveToStorage(), delay);
-        },
-
-
         loadFromStorage() {
-			try {
-				const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
-				if (!raw) return;
-				const data = JSON.parse(raw);
-				if (data && typeof data === 'object') {
-					this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-					this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
-					this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
-					this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
-					this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
-				}
-			} catch (error) {
-				console.warn('현재 상태 로드 실패:', error);
+		try {
+			const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
+			if (!raw) return;
+			const data = JSON.parse(raw);
+			if (data && typeof data === 'object') {
+				this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
+				this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
+				this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
+				this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
+				this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
 			}
-		},
+		} catch (error) {
+			console.warn('현재 상태 로드 실패:', error);
+		}
+	},
 
         savePresets() {
 			try {
@@ -768,19 +757,9 @@ createApp({
     beforeUnmount() {
         if (this.sortableInstance) {
             this.sortableInstance.destroy();
-        
-        // clear any pending long-press timers
-        try {
-            if (this.pressTimers) {
-                Object.values(this.pressTimers).forEach(t => { try { clearTimeout(t); } catch(_){} });
-                this.pressTimers = {};
-            }
-        } catch(_) {}
-
-    }
+        }
         this.clearActionTimeout();
         this.clearHoverTimeout();
         document.removeEventListener('click', this.handleOutsideClick);
     }
 }).mount('#app');
-
