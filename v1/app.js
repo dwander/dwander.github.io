@@ -29,7 +29,7 @@ createApp({
             activeActions: null,
             actionsTimeout: null,
             actionsKeepAlive: false,
-            photoList: [
+            items: [
                 { id: 1, text: '신랑신부 포즈컷', description: '', completed: false },
                 { id: 2, text: '신부 포즈컷', description: '', completed: false },
                 { id: 3, text: '신랑신부 정면', description: '', completed: false },
@@ -56,7 +56,7 @@ createApp({
     },
     
     watch: {
-        photoList: {
+        items: {
             handler() {
                 this.saveToStorage();
             },
@@ -366,7 +366,7 @@ createApp({
             if (!this.modalData.text.trim()) return;
             
             if (this.modalMode === 'add') {
-                this.photoList.push({
+                this.items.push({
                     id: this.nextId++,
                     text: this.modalData.text.trim(),
                     description: this.modalData.description.trim(),
@@ -392,7 +392,7 @@ createApp({
         toggleTheme() {
             this.isDarkMode = !this.isDarkMode;
             this._themeAutoFollow = false;
-            try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+            try { localStorage.setItem('checklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
             this.applyTheme();
             this.showMenu = false;
         },
@@ -406,9 +406,11 @@ createApp({
         },
         
         initializeTheme() {
-            const THEME_KEY = 'kpagChecklist:theme';
+            const THEME_KEY = 'checklist:theme';
+            const LEGACY_THEME_KEY = 'kpagChecklist:theme';
             try {
-                const saved = localStorage.getItem(THEME_KEY);
+                let saved = localStorage.getItem(THEME_KEY);
+                if (!saved) saved = localStorage.getItem(LEGACY_THEME_KEY);
                 if (saved === 'dark' || saved === 'light') {
                     this.isDarkMode = (saved === 'dark');
                 } else {
@@ -430,12 +432,16 @@ createApp({
                         this.applyTheme();
                     }
                 };
-                
                 try {
                     mq.addEventListener('change', handler);
                 } catch (err) {
                     mq.addListener(handler);
                 }
+                // Store cleanup to prevent leaks (simple and safe)
+                this._mqCleanup = () => {
+                    try { mq.removeEventListener('change', handler); }
+                    catch { mq.removeListener(handler); }
+                };
             }
         },
 
@@ -464,7 +470,7 @@ createApp({
             
             this.hideActions();
             
-            const item = this.photoList.find(item => item.id === id);
+            const item = this.items.find(item => item.id === id);
             if (!item) return;
             
             const trashBtn = document.querySelector('.trash-btn');
@@ -485,14 +491,14 @@ createApp({
                         ...item,
                         deletedAt: new Date().toISOString()
                     });
-                    this.photoList = this.photoList.filter(item => item.id !== id);
+                    this.items = this.items.filter(item => item.id !== id);
                 }, 500);
             } else {
                 this.trashItems.unshift({
                     ...item,
                     deletedAt: new Date().toISOString()
                 });
-                this.photoList = this.photoList.filter(item => item.id !== id);
+                this.items = this.items.filter(item => item.id !== id);
             }
         },
 
@@ -512,7 +518,7 @@ createApp({
                 description: trashItem.description,
                 completed: false
             };
-            this.photoList.push(restoredItem);
+            this.items.push(restoredItem);
             
             const element = this.getCardElById(trashItem.id);
             if (element) {
@@ -573,7 +579,7 @@ createApp({
             const slotNumber = this.selectedPresetSlot;
             const presetData = {
                 title: this.appTitle,
-                photoList: JSON.parse(JSON.stringify(this.photoList)),
+                items: JSON.parse(JSON.stringify(this.items)),
                 trashItems: JSON.parse(JSON.stringify(this.trashItems)),
                 nextId: this.nextId,
                 savedAt: new Date().toISOString()
@@ -590,7 +596,7 @@ createApp({
             const slotNumber = this.selectedPresetSlot;
             const preset = this.presets[this.selectedPresetSlot];
             this.appTitle = preset.title;
-            this.photoList = JSON.parse(JSON.stringify(preset.photoList));
+            this.items = JSON.parse(JSON.stringify(preset.items || preset.photoList || []));
             this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
             this.nextId = preset.nextId;
             
@@ -611,7 +617,7 @@ createApp({
         },
 
         resetAll() {
-            this.photoList.forEach(item => {
+            this.items.forEach(item => {
                 item.completed = false;
             });
             this.showMenu = false;
@@ -643,37 +649,32 @@ createApp({
         },
 
         saveToStorage() {
-            // Debounced/coalesced localStorage write to avoid thrashing
             try {
-                if (this._saveTimer) clearTimeout(this._saveTimer);
-                this._saveTimer = setTimeout(() => {
-                    try {
-                        const data = {
-                            appTitle: this.appTitle,
-                            photoList: this.photoList,
-                            trashItems: this.trashItems,
-                            nextId: this.nextId,
-                            lastSaved: new Date().toISOString()
-                        };
-                        localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
-                        this._currentData = JSON.stringify(data);
-                    } catch (error) {
-                        console.warn('현재 상태 저장 실패:', error);
-                    }
-                }, 200);
+                const data = {
+                    appTitle: this.appTitle,
+                    items: this.items,
+                    trashItems: this.trashItems,
+                    nextId: this.nextId,
+                    lastSaved: new Date().toISOString()
+                };
+                localStorage.setItem('checklist:state', JSON.stringify(data));
+                this._currentData = JSON.stringify(data);
             } catch (error) {
-                console.warn('저장 예약 실패:', error);
+                console.warn('현재 상태 저장 실패:', error);
             }
-        },
+},
 
         loadFromStorage() {
             try {
-                const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
+                const raw = localStorage.getItem('checklist:state')
+                    || localStorage.getItem('kpagChecklist:state')
+                    || this._currentData || null;
                 if (!raw) return;
                 const data = JSON.parse(raw);
                 if (data && typeof data === 'object') {
                     this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-                    this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
+                    this.items = Array.isArray(data.items) ? data.items
+                        : (Array.isArray(data.photoList) ? data.photoList : this.items);
                     this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
                     this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
                 }
@@ -684,7 +685,7 @@ createApp({
 
         savePresets() {
             try {
-                localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
+                localStorage.setItem('checklist:presets', JSON.stringify(this.presets));
                 this._presets = JSON.stringify(this.presets);
             } catch (error) {
                 console.warn('프리셋 저장 실패:', error);
@@ -693,7 +694,7 @@ createApp({
 
         loadPresets() {
             try {
-                const raw = localStorage.getItem('kpagChecklist:presets') || this._presets || null;
+                const raw = localStorage.getItem('checklist:presets') || this._presets || null;
                 if (raw) this.presets = JSON.parse(raw);
             } catch (error) {
                 console.warn('프리셋 로드 실패:', error);
@@ -701,7 +702,7 @@ createApp({
         },
 
         initSortable() {
-            const el = this.$refs.photoListEl;
+            const el = this.$refs.listEl;
             if (el && typeof Sortable !== 'undefined') {
                 if (this.sortableInstance) {
                     this.sortableInstance.destroy();
@@ -736,8 +737,8 @@ createApp({
                                 el.classList.remove('drag-arming');
                             }
                         } catch(_){}
-                        const item = this.photoList.splice(evt.oldIndex, 1)[0];
-                        this.photoList.splice(evt.newIndex, 0, item); 
+                        const item = this.items.splice(evt.oldIndex, 1)[0];
+                        this.items.splice(evt.newIndex, 0, item); 
                     }
                 });
             }
