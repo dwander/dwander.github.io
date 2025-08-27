@@ -176,7 +176,7 @@ body {
     position: relative;
     cursor: move;
     transition: transform 180ms ease-out, background-color 0.2s, border-color 0.2s, color 0.2s;
-    touch-action: manipulation;
+    touch-action: pan-y;
     background-color: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary);
@@ -864,4 +864,43 @@ body {
     width: auto;
     max-width: 100%;
     margin: 0;
+}
+
+
+/* === Hover-driven action panel visibility limited to desktop only ===
+   On touch/mobile (hover:none or pointer:coarse), hovering should NOT reveal actions.
+   Programmatic visibility (e.g., via JS-added classes) remains unaffected because
+   we only scope the :hover selector here.
+*/
+@media (hover: hover) and (pointer: fine) {
+  /* Desktop: allow hover to reveal item-actions */
+  .item:hover .item-actions {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
+/* Touch/mobile: disable hover reveal only (keep JS-controlled states intact) */
+@media (hover: none), (pointer: coarse) {
+  .item:hover .item-actions {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    /* do not force visibility hidden here to avoid clobbering JS-visible states */
+  }
+}
+
+/* === Patch: Disable hover-driven action panel (mobile-only app) ===
+   This app now shows the action panel ONLY after long-press via JS+haptics.
+   Remove/override any hover-based reveal to prevent flicker on touch devices.
+*/
+.item:hover .item-actions,
+.item .item-actions:hover,
+.item:focus:hover .item-actions,
+.item:focus-within:hover .item-actions {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: none !important;
 }

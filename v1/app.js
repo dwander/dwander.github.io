@@ -2,11 +2,11 @@ const { createApp } = Vue;
 
 createApp({
     data(){ 
-		return { 
-			actionsAnimating: false,
-			actionsAnimUntil: 0,
-			pressTimers: {},
-			pressActive: {},
+        return { 
+            actionsAnimating: false,
+            actionsAnimUntil: 0,
+            pointerTimers: {},     // pressTimers에서 변경
+            pointerActive: {},     // pressActive에서 변경
             appTitle: '촬영 체크리스트',
             editingTitle: false,
             tempTitle: '',
@@ -14,7 +14,7 @@ createApp({
             showTrashModal: false,
             showDescriptionModal: false,
             showPresetModal: false,
-			showMenu: false,
+            showMenu: false,
             modalMode: 'add', // 'add' or 'edit'
             modalData: { text: '', description: '' },
             editingItem: null,
@@ -42,7 +42,7 @@ createApp({
                 { id: 10, text: '플래시 컷', description: '', completed: false }
             ],
             nextId: 11,
-            touches: {}
+            pointers: {}  // touches에서 변경
         }
     },
     
@@ -137,88 +137,108 @@ createApp({
             try { fn && fn(); } catch(e) {}
         },
 
-        onItemTouchStart(e, id){
+        // 통합된 포인터 시작 처리 (터치와 마우스 모두 처리)
+        onItemPointerDown(e, id){
+			// 스와이프 트래킹 안정화
+			try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch(_) {}
+            this.pointerActive[id] = true;
             
-            this.pressActive[id] = true;
-            try {
-                const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
-                if (t) {
-                    this.touches[id] = { sx: t.clientX, sy: t.clientY, toggled: false };
-                }
-            } catch(_) {}
+            // 포인터 좌표 추출 (터치나 마우스 모두 처리)
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            
+            if (clientX !== undefined && clientY !== undefined) {
+                this.pointers[id] = { sx: clientX, sy: clientY, toggled: false };
+            }
 
             const el = this.getCardElById(id);
             if(el) {
                 el.classList.add('drag-arming');
             }
+            
             // Haptic + show actions after 220ms if still pressing
-            if(this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
-            this.pressTimers[id] = setTimeout(() => {
-                if(this.pressActive[id]) {
+            if(this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
+            this.pointerTimers[id] = setTimeout(() => {
+                if(this.pointerActive[id]) {
                     try { if (!this.isPointerFine) this.showItemActions(id); } catch(_){}
                     if (navigator && navigator.vibrate) { navigator.vibrate(12); }
                 }
             }, 220);
         },
         
-		onItemTouchMove(e, item){
-			if (this.uiLocked) return;
-			if (this.isPointerFine) return;
-			const id = item && item.id;
-			const state = this.touches[id] || {};
-			const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
-			if (!t) return;
-			const dx = t.clientX - (state.sx || 0);
-			const dy = t.clientY - (state.sy || 0);
-			const el = this.getCardElById(id);
+        // 통합된 포인터 이동 처리
+        onItemPointerMove(e, item){
+            if (this.uiLocked) return;
+            
+            const id = item && item.id;
+            const state = this.pointers[id] || {};
+            
+            // 포인터가 눌린 상태가 아니면 무시 (중요!)
+            if (!this.pointerActive[id] || !state.sx) return;
+            
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            
+            if (clientX === undefined || clientY === undefined) return;
+            
+            const dx = clientX - (state.sx || 0);
+            const dy = clientY - (state.sy || 0);
+            const el = this.getCardElById(id);
 
-			// 길게 누름 취소
+			// 길게누름(액션 열기)만 취소하고, 스와이프 트래킹은 유지
 			if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
-				if (this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
-				this.pressActive[id] = false;
+				if (this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
+				// ! pointerActive를 false로 두면 이후 스와이프 로직이 전부 return 됩니다.
 			}
 
-			// 수평 제스처
-			const hori = Math.abs(dx) >= 12 && Math.abs(dx) > Math.abs(dy) * 1.5;
-			if (el) {
-				const tx = Math.max(-72, Math.min(dx, 72));
-				el.style.transform = `translateX(${tx}px)`;
-			}
+            // 수평 제스처
+            const hori = Math.abs(dx) >= 12 && Math.abs(dx) > Math.abs(dy) * 1.5;
+            if (el) {
+                const tx = Math.max(-72, Math.min(dx, 72));
+                el.style.transform = `translateX(${tx}px)`;
+            }
 
-			// 오른쪽 스와이프 → 체크 완료
-			if (hori && dx > 42 && !state.toggled && !item.completed) {
-				this.toggleComplete(item);
-				state.toggled = true;
-				this.touches[id] = state;
-				try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
-			}
+            // 오른쪽 스와이프 → 체크 완료
+            if (hori && dx > 42 && !state.toggled && !item.completed) {
+                this.toggleComplete(item);
+                state.toggled = true;
+                this.pointers[id] = state;
+                try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
+            }
 
-			// 왼쪽 스와이프 → 체크 해제
-			if (hori && dx < -42 && !state.toggled && item.completed) {
-				this.toggleComplete(item);
-				state.toggled = true;
-				this.touches[id] = state;
-				try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
-			}
-		},
+            // 왼쪽 스와이프 → 체크 해제
+            if (hori && dx < -42 && !state.toggled && item.completed) {
+                this.toggleComplete(item);
+                state.toggled = true;
+                this.pointers[id] = state;
+                try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
+            }
+        },
 
-        onItemTouchEnd(e, id){
-            this.pressActive[id] = false;
-            try {
+        // 통합된 포인터 종료 처리
+        onItemPointerUp(e, id){
+            this.pointerActive[id] = false;
+
+			try { 
+				e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId);
+			} catch(_) {}            
+
+			try {
                 const el = this.getCardElById(id);
                 if (el) {
                     el.style.transform = '';
                 }
-                if (this.touches[id]) delete this.touches[id];
+                if (this.pointers[id]) delete this.pointers[id];
             } catch(_) {}
 
-            if(this.pressTimers[id]) clearTimeout(this.pressTimers[id]);
+            if(this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
             const el = this.getCardElById(id);
             // If not actively dragging, remove arming quickly
             if(el && !el.classList.contains('dragging')) {
                 el.classList.remove('drag-arming');
             }
         },
+        
         getCardElById(id){
             const list = this.$el.querySelectorAll('.list-item');
             for(const li of list){
@@ -284,16 +304,12 @@ createApp({
             this.cancelModal();
         },
 
-
-// 제목 클릭(데스크탑 전용)
-clickTitle(item, e){
-    if (this.uiLocked) return;
-    if (this.isPointerFine) {
-        this.toggleComplete(item);
-    } else {
-        // 모바일에선 클릭 무시
-    }
-},
+        // 제목 클릭 비활성화 (스와이프로 통일)
+        clickTitle(item, e){
+            // 스와이프로 통일하므로 클릭 동작 비활성화
+            return;
+        },
+        
         // 체크박스 토글
         toggleComplete(item) {
             item.completed = !item.completed;
@@ -302,12 +318,12 @@ clickTitle(item, e){
 
         // UI 제어
         toggleTheme() {
-			this.isDarkMode = !this.isDarkMode;
-			this._themeAutoFollow = false;
-			try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-			this.applyTheme();
-			this.showMenu = false;
-		},
+            this.isDarkMode = !this.isDarkMode;
+            this._themeAutoFollow = false;
+            try { localStorage.setItem('kpagChecklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+            this.applyTheme();
+            this.showMenu = false;
+        },
 
         applyTheme() {
             if (this.isDarkMode) {
@@ -318,45 +334,45 @@ clickTitle(item, e){
         },
         
         initializeTheme() {
-			const THEME_KEY = 'kpagChecklist:theme';
-			// 1) 저장된 테마 우선
-			try {
-				const saved = localStorage.getItem(THEME_KEY);
-				if (saved === 'dark' || saved === 'light') {
-					this.isDarkMode = (saved === 'dark');
-				} else {
-					const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-					this.isDarkMode = !!prefersDark;
-				}
-			} catch (e) {
-				const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-				this.isDarkMode = !!prefersDark;
-			}
-			this.applyTheme();
+            const THEME_KEY = 'kpagChecklist:theme';
+            // 1) 저장된 테마 우선
+            try {
+                const saved = localStorage.getItem(THEME_KEY);
+                if (saved === 'dark' || saved === 'light') {
+                    this.isDarkMode = (saved === 'dark');
+                } else {
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    this.isDarkMode = !!prefersDark;
+                }
+            } catch (e) {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.isDarkMode = !!prefersDark;
+            }
+            this.applyTheme();
 
-			// 2) 시스템 변경 감지
-			if (window.matchMedia) {
-				const mq = window.matchMedia('(prefers-color-scheme: dark)');
-				try {
-					mq.addEventListener('change', (e) => {
-						if (this._themeAutoFollow !== false) {
-							this.isDarkMode = e.matches;
-							try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-							this.applyTheme();
-						}
-					});
-				} catch (err) {
-					// (구형) 폴백
-					mq.addListener((e) => {
-						if (this._themeAutoFollow !== false) {
-							this.isDarkMode = e.matches;
-							try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-							this.applyTheme();
-						}
-					});
-				}
-			}
-		},
+            // 2) 시스템 변경 감지
+            if (window.matchMedia) {
+                const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                try {
+                    mq.addEventListener('change', (e) => {
+                        if (this._themeAutoFollow !== false) {
+                            this.isDarkMode = e.matches;
+                            try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+                            this.applyTheme();
+                        }
+                    });
+                } catch (err) {
+                    // (구형) 폴백
+                    mq.addListener((e) => {
+                        if (this._themeAutoFollow !== false) {
+                            this.isDarkMode = e.matches;
+                            try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+                            this.applyTheme();
+                        }
+                    });
+                }
+            }
+        },
 
         toggleUILock() {
             this.uiLocked = !this.uiLocked;
@@ -455,7 +471,7 @@ clickTitle(item, e){
             
             // 애니메이션을 위해 요소에 클래스 추가
             const element = this.getCardElById(id);
-			if (element) {
+            if (element) {
                 element.classList.add('item-deleting');
                 
                 // 애니메이션 완료 후 실제 삭제
@@ -503,7 +519,7 @@ clickTitle(item, e){
             
             // 짧은 피드백
             const element = this.getCardElById(trashItem.id);
-			if (element) {
+            if (element) {
                 element.style.animation = 'fadeIn 0.5s ease';
             }
         },
@@ -638,54 +654,54 @@ clickTitle(item, e){
 
         // 데이터 저장/로드
         saveToStorage() {
-			try {
-				const data = {
-					appTitle: this.appTitle,
-					photoList: this.photoList,
-					trashItems: this.trashItems,
-					nextId: this.nextId,
-					lastSaved: new Date().toISOString()
-				};
-				localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
-				this._currentData = JSON.stringify(data); // fallback 유지
-			} catch (error) {
-				console.warn('현재 상태 저장 실패:', error);
-			}
-		},
+            try {
+                const data = {
+                    appTitle: this.appTitle,
+                    photoList: this.photoList,
+                    trashItems: this.trashItems,
+                    nextId: this.nextId,
+                    lastSaved: new Date().toISOString()
+                };
+                localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
+                this._currentData = JSON.stringify(data); // fallback 유지
+            } catch (error) {
+                console.warn('현재 상태 저장 실패:', error);
+            }
+        },
 
         loadFromStorage() {
-		try {
-			const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
-			if (!raw) return;
-			const data = JSON.parse(raw);
-			if (data && typeof data === 'object') {
-				this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-				this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
-				this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
-				this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
-			}
-		} catch (error) {
-			console.warn('현재 상태 로드 실패:', error);
-		}
-	},
+            try {
+                const raw = localStorage.getItem('kpagChecklist:state') || this._currentData || null;
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                if (data && typeof data === 'object') {
+                    this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
+                    this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
+                    this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
+                    this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
+                }
+            } catch (error) {
+                console.warn('현재 상태 로드 실패:', error);
+            }
+        },
 
         savePresets() {
-			try {
-				localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
-				this._presets = JSON.stringify(this.presets); // fallback 유지
-			} catch (error) {
-				console.warn('프리셋 저장 실패:', error);
-			}
-		},
+            try {
+                localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
+                this._presets = JSON.stringify(this.presets); // fallback 유지
+            } catch (error) {
+                console.warn('프리셋 저장 실패:', error);
+            }
+        },
 
         loadPresets() {
-			try {
-				const raw = localStorage.getItem('kpagChecklist:presets') || this._presets || null;
-				if (raw) this.presets = JSON.parse(raw);
-			} catch (error) {
-				console.warn('프리셋 로드 실패:', error);
-			}
-		},
+            try {
+                const raw = localStorage.getItem('kpagChecklist:presets') || this._presets || null;
+                if (raw) this.presets = JSON.parse(raw);
+            } catch (error) {
+                console.warn('프리셋 로드 실패:', error);
+            }
+        },
 
         // 드래그 앤 드롭 초기화
         initSortable() {
@@ -703,9 +719,29 @@ clickTitle(item, e){
                     touchStartThreshold: 6,
                     delay: 220,
                     delayOnTouchOnly: true,
-                    onStart: (evt) => { document.body.style.overflow = 'hidden'; try { const id = evt.item && evt.item.dataset && evt.item.dataset.id; const el = this.getCardElById(id); if (el) { el.classList.add('dragging'); el.classList.remove('drag-arming'); 
-        } } catch(_){} },
-                    onEnd: (evt) => { document.body.style.overflow = ''; try { const id = evt.item && evt.item.dataset && evt.item.dataset.id; const el = this.getCardElById(id); if (el) { el.classList.remove('dragging'); el.classList.remove('drag-arming'); } } catch(_){} const item = this.photoList.splice(evt.oldIndex, 1)[0]; this.photoList.splice(evt.newIndex, 0, item); }
+                    onStart: (evt) => { 
+						document.body.style.overflow = 'hidden'; try {
+							const id = evt.item && evt.item.dataset && evt.item.dataset.id;
+							const el = this.getCardElById(id);
+							if (el) {
+								el.classList.add('dragging');
+								el.classList.remove('drag-arming');
+							}
+						} catch(_){}
+					},
+	                onEnd: (evt) => {
+						document.body.style.overflow = '';
+						try {
+							const id = evt.item && evt.item.dataset && evt.item.dataset.id;
+							const el = this.getCardElById(id);
+							if (el) {
+								el.classList.remove('dragging');
+								el.classList.remove('drag-arming');
+							}
+						} catch(_){}
+						const item = this.photoList.splice(evt.oldIndex, 1)[0];
+						this.photoList.splice(evt.newIndex, 0, item); 
+					}
                 });
             }
         }

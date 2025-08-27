@@ -111,17 +111,18 @@
                 >
                     <div class="item-wrapper"><!-- 메인 콘텐츠 -->
                         <div class="bg-white border rounded-2 item-card item-clickable"
-                            style="padding: 0.75rem 0.875rem;"
+                            style="padding: 0.75rem 0.875rem; "
                             :class="{ 
                                 'item-completed': item.completed,
                                 'ui-locked': uiLocked
                             }"
-                            @touchstart="onItemTouchStart($event, item.id)"
-                            @touchend="onItemTouchEnd($event, item.id)"
-                            @touchcancel="onItemTouchEnd($event, item.id)"
-                            @touchmove="onItemTouchMove($event, item)"
-                           
-                            @pointerenter="onCardPointerEnter($event, item.id)" @pointerleave="onCardPointerLeave($event, item.id)">
+                            @pointerdown="onItemPointerDown($event, item.id)"
+                            @pointermove="onItemPointerMove($event, item)"
+                            @pointerup="onItemPointerUp($event, item.id)"
+                            @pointercancel="onItemPointerUp($event, item.id)"
+                            @pointerleave="onItemPointerUp($event, item.id)"
+                            @pointerenter="onCardPointerEnter($event, item.id)" 
+                            @pointerout="onCardPointerLeave($event, item.id)">
 
                             <div class="d-flex align-items-center">
                                 <!-- 텍스트 영역 -->
@@ -132,7 +133,7 @@
                                         @click.stop="clickTitle(item, $event)"
                                     >
                                         <div class="item-title d-flex align-items-center">
-                                            <span v-if="item.completed" class="item-check me-2" aria-hidden="true">✔</span>{{ item.text }}
+                                            <span v-if="item.completed" class="item-check me-2" aria-hidden="true">✓</span>{{ item.text }}
                                             <div :id="'actions-' + item.id"
                                                 class="item-actions"
                                                 :class="{ visible: activeActions === item.id, animating: (!isPointerFine && actionsAnimating && activeActions === item.id) }"
