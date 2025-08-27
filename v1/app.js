@@ -1,9 +1,12 @@
+const STORAGE_KEY_STATE = 'checklist:state';
+const STORAGE_KEY_PRESETS = 'checklist:presets';
+const STORAGE_KEY_THEME = 'checklist:theme';
+
 const { createApp } = Vue;
 
-createApp({
+const app = createApp({
     data(){ 
-        return { 
-            _saveTimer: null, _saveQueued: false, _rafMap: new Map(), actionsAnimating: false,
+        return { _toastEl: null, _toastTimer: null, toastVisible: false, toastMessage: '', toastTimer: null, _saveTimer: null, _saveQueued: false, _rafMap: new Map(), actionsAnimating: false,
             actionsAnimUntil: 0,
             pointerTimers: {},
             pointerActive: {},
@@ -87,6 +90,34 @@ createApp({
     },
     
     methods: {
+        // 한국어 조사 자동 선택: pair 예) '이가', '을를', '은는', '과와'
+        josa(value, pair = '이가') {
+            try {
+                const s = String(value).trim();
+                const last = s.charAt(s.length - 1);
+                const code = last.charCodeAt(0);
+                const pick = (withJong) => withJong ? pair[0] : pair[1];
+                // 한글 음절 범위
+                if (code >= 0xAC00 && code <= 0xD7A3) {
+                    const jong = (code - 0xAC00) % 28; // 0이면 받침 없음
+                    return pick(jong != 0);
+                }
+                // 숫자(마지막 자리 발음의 받침 여부 기반)
+                if (/\d/.test(last)) {
+                    const d = parseInt(last, 10);
+                    const hasJong = [0,1,3,6,7,8].includes(d); // 영,일,삼,육,칠,팔 → 받침 O
+                    return pick(hasJong);
+                }
+                // 기타 문자: 기본적으로 받침 없음 취급
+                return pick(false);
+            } catch(_) { return pair[1]; }
+        },
+        showToast(message = '완료되었습니다.', duration = 2000) {
+            try { if (this.toastTimer) clearTimeout(this.toastTimer); } catch(_) {}
+            this.toastMessage = message;
+            this.toastVisible = true;
+            this.toastTimer = setTimeout(() => { this.toastVisible = false; }, duration);
+        },
         clearAllTimers(id = null) {
             if (id) {
                 if (this.pointerTimers[id]) {
@@ -392,7 +423,7 @@ createApp({
         toggleTheme() {
             this.isDarkMode = !this.isDarkMode;
             this._themeAutoFollow = false;
-            try { localStorage.setItem('checklist:theme', this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+            try { localStorage.setItem(STORAGE_KEY_THEME, this.isDarkMode ? 'dark' : 'light') } catch(_) {}
             this.applyTheme();
             this.showMenu = false;
         },
@@ -406,10 +437,9 @@ createApp({
         },
         
         initializeTheme() {
-            const THEME_KEY = 'checklist:theme';try {
+            const THEME_KEY = STORAGE_KEY_THEME;try {
                 let saved = localStorage.getItem(THEME_KEY);
-                if (!saved) saved = localStorage.getItem(LEGACY_THEME_KEY);
-                if (saved === 'dark' || saved === 'light') {
+if (saved === 'dark' || saved === 'light') {
                     this.isDarkMode = (saved === 'dark');
                 } else {
                     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -565,8 +595,9 @@ createApp({
         closePresetModal() {
             this.showPresetModal = false;
             this.selectedPresetSlot = null;
+            // focus restore
+            this.$nextTick(() => { try { this.$refs.menuButton && this.$refs.menuButton.focus(); } catch(_) {} });
         },
-
         selectPresetSlot(slot) {
             this.selectedPresetSlot = slot;
         },
@@ -585,8 +616,8 @@ createApp({
             
             this.presets[this.selectedPresetSlot] = presetData;
             this.savePresets();
-            alert(`프리셋 ${slotNumber}에 저장되었습니다.`);
-        },
+            this.closePresetModal(); this.showToast(`프리셋 ${slotNumber}${this.josa(slotNumber,'이가')} 저장되었습니다.`);
+            },
 
         loadPreset() {
             if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
@@ -594,23 +625,23 @@ createApp({
             const slotNumber = this.selectedPresetSlot;
             const preset = this.presets[this.selectedPresetSlot];
             this.appTitle = preset.title;
-            this.items = JSON.parse(JSON.stringify(preset.items || preset.items || []));
+            this.items = JSON.parse(JSON.stringify(preset.items || []));
             this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
             this.nextId = preset.nextId;
             
             this.closePresetModal();
-            alert(`프리셋 ${slotNumber}을 불러왔습니다.`);
+            this.showToast(`프리셋 ${slotNumber}${this.josa(slotNumber,'을를')} 불러왔습니다.`);
         },
 
         clearPreset() {
             if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
-            
             const slotNumber = this.selectedPresetSlot;
             if (confirm(`프리셋 ${slotNumber}을 삭제하시겠습니까?`)) {
                 delete this.presets[this.selectedPresetSlot];
                 this.savePresets();
+                this.closePresetModal();
+                this.showToast(`프리셋 ${slotNumber}${this.josa(slotNumber,'이가')} 삭제되었습니다.`);
                 this.selectedPresetSlot = null;
-                alert('프리셋이 삭제되었습니다.');
             }
         },
 
@@ -655,7 +686,7 @@ createApp({
                     nextId: this.nextId,
                     lastSaved: new Date().toISOString()
                 };
-                localStorage.setItem('checklist:state', JSON.stringify(data));
+                localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(data));
                 this._currentData = JSON.stringify(data);
             } catch (error) {
                 console.warn('현재 상태 저장 실패:', error);
@@ -664,13 +695,12 @@ createApp({
 
         loadFromStorage() {
             try {
-                const raw = localStorage.getItem('checklist:state') || this._currentData || null;
+                const raw = localStorage.getItem(STORAGE_KEY_STATE) || this._currentData || null;
                 if (!raw) return;
                 const data = JSON.parse(raw);
                 if (data && typeof data === 'object') {
                     this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-                    this.items = Array.isArray(data.items) ? data.items
-                        : (Array.isArray(data.items) ? data.items : this.items);
+                    this.items = Array.isArray(data.items) ? data.items : this.items;
                     this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
                     this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
                 }
@@ -681,7 +711,7 @@ createApp({
 
         savePresets() {
             try {
-                localStorage.setItem('checklist:presets', JSON.stringify(this.presets));
+                localStorage.setItem(STORAGE_KEY_PRESETS, JSON.stringify(this.presets));
                 this._presets = JSON.stringify(this.presets);
             } catch (error) {
                 console.warn('프리셋 저장 실패:', error);
@@ -690,7 +720,7 @@ createApp({
 
         loadPresets() {
             try {
-                const raw = localStorage.getItem('checklist:presets') || this._presets || null;
+                const raw = localStorage.getItem(STORAGE_KEY_PRESETS) || this._presets || null;
                 if (raw) this.presets = JSON.parse(raw);
             } catch (error) {
                 console.warn('프리셋 로드 실패:', error);
@@ -742,10 +772,11 @@ createApp({
     },
 
     beforeUnmount() {
-        if (this.sortableInstance) {
-            this.sortableInstance.destroy();
-        }
-        this.clearAllTimers();
-        document.removeEventListener('click', this.handleOutsideClick);
+        try { if (this._mqCleanup) { this._mqCleanup(); } } catch(_) {}
+        try { if (this.sortableInstance) { this.sortableInstance.destroy(); } } catch(_) {}
+        try { this.clearAllTimers && this.clearAllTimers(); } catch(_) {}
+        try { document.removeEventListener('click', this.handleOutsideClick); } catch(_) {}
+        try { if (this._toastEl) { this._toastEl.remove(); this._toastEl = null; } } catch(_) {}
     }
-}).mount('#app');
+});
+app.mount('#app');
