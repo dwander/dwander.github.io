@@ -13,7 +13,6 @@ createApp({
             showModal: false,
             showTrashModal: false,
             showDescriptionModal: false,
-            showStorageModal: false,
             showPresetModal: false,
 			showMenu: false,
             modalMode: 'add', // 'add' or 'edit'
@@ -24,7 +23,6 @@ createApp({
             isDarkMode: false,
             uiLocked: false,
             trashItems: [], // 삭제된 항목들
-            storageItems: [], // 보관된 항목들
             presets: {}, // 프리셋 저장소
             selectedPresetSlot: null, // 선택된 프리셋 슬롯
             sortableInstance: null,
@@ -66,12 +64,6 @@ createApp({
             },
             deep: true
         },
-        storageItems: {
-            handler() {
-                this.saveToStorage();
-            },
-            deep: true
-        },
         
         isDarkMode() {
             this.saveToStorage();
@@ -94,8 +86,6 @@ createApp({
     },
     
     methods: {
-    openHelpModal(){ this.showHelpModal = true; this.showMenu = false; },
-    closeHelpModal(){ this.showHelpModal = false; },
         // --- Unified actions controller ---
         openActions(itemId, ms) {
             if (this.uiLocked) return;
@@ -373,101 +363,6 @@ createApp({
             this.selectedItem = null;
         },
 
-        // 보관소 관련
-        moveToStorage(id) {
-            if (this.uiLocked) return;
-            
-            // 액션 버튼 숨김
-            this.activeActions = null;
-            this.clearActionTimeout();
-            this.clearHoverTimeout();
-            
-            const item = this.photoList.find(item => item.id === id);
-            if (!item) return;
-            
-            // 보관소 '원(링)' bounce 애니메이션 (버튼 ::before를 애니메이션)
-            const storageBtn = document.querySelector('.storage-btn');
-            if (storageBtn) {
-                storageBtn.classList.remove('ring-bounce');
-                void storageBtn.offsetWidth; // 강제 리플로우
-                storageBtn.classList.add('ring-bounce');
-                window.setTimeout(() => {
-                    storageBtn.classList.remove('ring-bounce');
-                }, 600);
-            } 
-            
-            // 애니메이션을 위해 요소에 클래스 추가
-            const element = this.getCardElById(id);
-			if (element) {
-                element.classList.add('item-deleting');
-                
-                // 애니메이션 완료 후 실제 이동
-                setTimeout(() => {
-                    // 보관소에 추가
-                    this.storageItems.unshift({
-                        ...item,
-                        storedAt: new Date().toISOString()
-                    });
-                    
-                    // 리스트에서 제거
-                    this.photoList = this.photoList.filter(item => item.id !== id);
-                }, 500);
-            } else {
-                // 애니메이션이 불가능한 경우 즉시 처리
-                this.storageItems.unshift({
-                    ...item,
-                    storedAt: new Date().toISOString()
-                });
-                this.photoList = this.photoList.filter(item => item.id !== id);
-            }
-        },
-
-        openStorageModal() {
-            this.showStorageModal = true;
-        },
-
-        closeStorageModal() {
-            this.showStorageModal = false;
-        },
-
-        restoreFromStorage(storageItem) {
-            // 보관소에서 제거
-            this.storageItems = this.storageItems.filter(item => item.id !== storageItem.id);
-            
-            // 리스트 맨 아래에 추가
-            const restoredItem = {
-                id: storageItem.id,
-                text: storageItem.text,
-                description: storageItem.description,
-                completed: false // 복구시 체크 해제 상태로
-            };
-            
-            this.photoList.push(restoredItem);
-            
-            // 짧은 피드백
-            const element = this.getCardElById(storageItem.id);
-			if (element) {
-                element.style.animation = 'fadeIn 0.5s ease';
-            }
-        },
-
-        // 휴지통 관련
-        moveAllFromTrashToStorage() {
-            if (this.trashItems.length === 0) return;
-            
-            // 모든 휴지통 항목을 보관소로 이동
-            this.trashItems.forEach(item => {
-                this.storageItems.unshift({
-                    ...item,
-                    storedAt: new Date().toISOString()
-                });
-            });
-            
-            // 휴지통 비우기
-            this.trashItems = [];
-            this.closeTrashModal();
-        },
-
         removeItem(id) {
             if (this.uiLocked) return;
             
@@ -557,7 +452,6 @@ createApp({
             this.showModal = false;
             this.showTrashModal = false;
             this.showDescriptionModal = false;
-            this.showStorageModal = false;
             this.showPresetModal = false;
             
             this.showMenu = false;
@@ -605,7 +499,6 @@ createApp({
                 title: this.appTitle,
                 photoList: JSON.parse(JSON.stringify(this.photoList)),
                 trashItems: JSON.parse(JSON.stringify(this.trashItems)),
-                storageItems: JSON.parse(JSON.stringify(this.storageItems)),
                 nextId: this.nextId,
                 savedAt: new Date().toISOString()
             };
@@ -623,7 +516,6 @@ createApp({
             this.appTitle = preset.title;
             this.photoList = JSON.parse(JSON.stringify(preset.photoList));
             this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
-            this.storageItems = JSON.parse(JSON.stringify(preset.storageItems));
             this.nextId = preset.nextId;
             
             this.closePresetModal();
@@ -683,7 +575,6 @@ createApp({
 					appTitle: this.appTitle,
 					photoList: this.photoList,
 					trashItems: this.trashItems,
-					storageItems: this.storageItems,
 					nextId: this.nextId,
 					lastSaved: new Date().toISOString()
 				};
@@ -703,7 +594,6 @@ createApp({
 				this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
 				this.photoList = Array.isArray(data.photoList) ? data.photoList : this.photoList;
 				this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
-				this.storageItems = Array.isArray(data.storageItems) ? data.storageItems : this.storageItems;
 				this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
 			}
 		} catch (error) {
