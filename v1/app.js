@@ -3,7 +3,7 @@ const { createApp } = Vue;
 createApp({
     data(){ 
         return { 
-            actionsAnimating: false,
+            _saveTimer: null, _saveQueued: false, _rafMap: new Map(), actionsAnimating: false,
             actionsAnimUntil: 0,
             pointerTimers: {},
             pointerActive: {},
@@ -101,13 +101,13 @@ createApp({
         },
 
         getCardElById(id){
-            const list = this.$el.querySelectorAll('.list-item');
-            for(const li of list){
-                if(String(li.getAttribute('data-id')) === String(id)){
-                    return li.querySelector('.item-card');
-                }
+            try {
+                // Faster direct lookup via attribute selector (no full list scan)
+                const el = this.$el.querySelector(`.list-item[data-id="${id}"] .item-card`);
+                return el || null;
+            } catch(_) {
+                return null;
             }
-            return null;
         },
 
         // --- 완전 통합된 액션 시스템 ---
@@ -242,7 +242,29 @@ createApp({
             const hori = Math.abs(dx) >= 12 && Math.abs(dx) > Math.abs(dy) * 1.5;
             if (el) {
                 const tx = Math.max(-72, Math.min(dx, 72));
-                el.style.transform = `translateX(${tx}px)`;
+                // Batch DOM writes for smoother pointer moves
+
+                const _id = id;
+
+                if (!this._rafMap.has(_id)) {
+
+                    this._rafMap.set(_id, requestAnimationFrame(() => {
+
+                        try {
+
+                            const _el = this.getCardElById(_id);
+
+                            if (_el) _el.style.transform = `translateX(${tx}px)`;
+
+                        } finally {
+
+                            this._rafMap.delete(_id);
+
+                        }
+
+                    }));
+
+                }
             }
 
             // 체크 토글 (통합된 로직)
@@ -262,6 +284,15 @@ createApp({
         },
 
         onItemPointerUp(e, id) {
+            // cancel any pending rAF updates for this id
+            try {
+                const handle = this._rafMap && this._rafMap.get(id);
+                if (handle) {
+                    cancelAnimationFrame(handle);
+                    this._rafMap.delete(id);
+                }
+            } catch(_) {}
+
             this.pointerActive[id] = false;
             this.isPointerPressed = false;
 
@@ -612,18 +643,26 @@ createApp({
         },
 
         saveToStorage() {
+            // Debounced/coalesced localStorage write to avoid thrashing
             try {
-                const data = {
-                    appTitle: this.appTitle,
-                    photoList: this.photoList,
-                    trashItems: this.trashItems,
-                    nextId: this.nextId,
-                    lastSaved: new Date().toISOString()
-                };
-                localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
-                this._currentData = JSON.stringify(data);
+                if (this._saveTimer) clearTimeout(this._saveTimer);
+                this._saveTimer = setTimeout(() => {
+                    try {
+                        const data = {
+                            appTitle: this.appTitle,
+                            photoList: this.photoList,
+                            trashItems: this.trashItems,
+                            nextId: this.nextId,
+                            lastSaved: new Date().toISOString()
+                        };
+                        localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
+                        this._currentData = JSON.stringify(data);
+                    } catch (error) {
+                        console.warn('현재 상태 저장 실패:', error);
+                    }
+                }, 200);
             } catch (error) {
-                console.warn('현재 상태 저장 실패:', error);
+                console.warn('저장 예약 실패:', error);
             }
         },
 
