@@ -18,10 +18,11 @@ body {
 .header-section {
     overflow: visible;
 }
-.text-editable:focus { outline: none; box-shadow: none; }
 
-.list-item {
-    margin: 0 5px 0.375rem 5px;}
+.text-editable:focus { 
+    outline: none; 
+    box-shadow: none; 
+}
 
 .list-bottom-spacing {
     margin-bottom: 2.5rem;
@@ -35,12 +36,10 @@ body {
     user-select: none;
 }
 
-
 /* ------------------- 테마 ---------------------------- */
 :root {
     --primary: var(--accent-blue);
     --primary-hover: var(--accent-blue-hover);
-
     --badge-left: -12px; /* default badge x */
     --badge-left-completed: -2px; /* when card is completed */
     --bg-primary: #f8f9fa;
@@ -59,7 +58,6 @@ body {
     --badge-bg: #495057;
     --item-hover-bg: #e9ecef;
     --modal-backdrop: rgba(0,0,0,0.5);
-
     --completed-indent: 1rem;
 }
 
@@ -138,10 +136,8 @@ body {
     color: var(--text-muted) !important;
 }
 
-
 /* -------- 모바일 고려 -----------------------*/
 @media (max-width: 768px) {
-
     .content-wrapper {
         padding: 0.25rem 0.5rem;
     }
@@ -166,8 +162,11 @@ body {
     }
 }
 
-
 /* ------------ 아이템 ---------------*/
+.list-item {
+    margin: 0 5px 0.575rem 5px;
+}
+
 .item-wrapper {
     position: relative;
 }
@@ -176,11 +175,10 @@ body {
     position: relative;
     cursor: move;
     transition: transform 180ms ease-out, background-color 0.2s, border-color 0.2s, color 0.2s;
-    touch-action: pan-y;
+    touch-action: none; /* 브라우저 기본 터치 동작 방지 */
     background-color: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary);
-
     transform-origin: right center;
     will-change: transform;
 }
@@ -251,7 +249,10 @@ body {
     color: var(--accent-blue-hover);
 }
 
-.item-actions { position:absolute; top:0.5rem; right:0.5rem;
+.item-actions { 
+    position: absolute; 
+    top: 0.5rem; 
+    right: 0.5rem;
     display: none;
     gap: 6px;
     align-items: center;
@@ -304,8 +305,6 @@ body {
     stroke-linejoin: round;
 }
 
-
-
 .description-popup {
     position: fixed;
     top: 50%;
@@ -347,12 +346,12 @@ body {
     transform: translateZ(0) scale(0.985);
     transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
+
 .item-card.dragging {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--primary) inset, 0 10px 26px rgba(0,0,0,0.16);
     transform: translateZ(0) scale(1.02);
 }
-
 
 /*--------------- 메뉴 ----------------*/
 .menu-btn {
@@ -427,13 +426,13 @@ body {
     height: 16px;
     flex-shrink: 0;
 }
-/* --------------------   모달    ------------------------- */
-/* Common modal base props */
+
+/* -------------------- 모달 ------------------------- */
 .edit-modal, .trash-modal, .preset-modal {
-  position: fixed;
-  left: 50%;
-  z-index: 1050;
-  max-width: calc(100vw - 2rem);
+    position: fixed;
+    left: 50%;
+    z-index: 1050;
+    max-width: calc(100vw - 2rem);
 }
 
 .edit-modal {
@@ -517,7 +516,6 @@ body {
     height: 100vh;
     background-color: var(--modal-backdrop);
 }
-
 
 .preset-modal {
     position: fixed;
@@ -712,7 +710,7 @@ body {
     20% {
         opacity: 0.6;
     }
-	100% {
+    100% {
         transform: translate(-50%, -50%) scale(2.5);
         opacity: 0;
     }
@@ -750,92 +748,14 @@ body {
     margin-bottom: 0.5rem;
 }
 
-
 /* inline check inside title */
 .item-title .item-check{
-  position: static;
-  transform: none;
-  font-size: 1.1rem;
-  margin-right: 8px;
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-/* === Canonical: item actions & icons === */
-.item-actions {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  display: none;
-  gap: 6px;
-  align-items: center;
-  pointer-events: none;
-  z-index: 2;
-}
-.item-card:hover .item-actions {
-  display: inline-flex;
-  pointer-events: auto;
-}
-.item-actions.visible {
-  display: inline-flex;
-  pointer-events: auto;
-  animation: fadeInActions 0.2s ease;
-}
-.item-actions.animating {
-  pointer-events: none;
-}
-
-/* Action button: minimalist (borderless by default) */
-.item-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 6px;
-  opacity: 0.55;
-}
-.item-action-btn:hover {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 2px 4px var(--shadow-sm);
-  opacity: 1;
-}
-
-/* Icon stroke style */
-.action-icon {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  color: var(--text-primary);
-}
-
-/* Inline check in title (static) */
-.item-title .item-check {
-  position: static;
-  transform: none;
-  font-size: 1.1rem;
-  margin-right: 8px;
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-
-@media (hover: none) and (pointer: coarse) {
-  .item-actions {
-    display: inline-flex;
-    pointer-events: auto;
-  }
-  .item-actions.animating {
+    position: static;
+    transform: none;
+    font-size: 1.1rem;
+    margin-right: 8px;
+    opacity: 0.9;
     pointer-events: none;
-  }
-  .item-action-btn {
-    padding: 10px;
-  }
 }
 
 /* Width adjustments requested */
@@ -866,41 +786,10 @@ body {
     margin: 0;
 }
 
-
-/* === Hover-driven action panel visibility limited to desktop only ===
-   On touch/mobile (hover:none or pointer:coarse), hovering should NOT reveal actions.
-   Programmatic visibility (e.g., via JS-added classes) remains unaffected because
-   we only scope the :hover selector here.
-*/
+/* 데스크탑에서 hover로 액션 표시 허용 */
 @media (hover: hover) and (pointer: fine) {
-  /* Desktop: allow hover to reveal item-actions */
-  .item:hover .item-actions {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
-}
-
-/* Touch/mobile: disable hover reveal only (keep JS-controlled states intact) */
-@media (hover: none), (pointer: coarse) {
-  .item:hover .item-actions {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    /* do not force visibility hidden here to avoid clobbering JS-visible states */
-  }
-}
-
-/* === Patch: Disable hover-driven action panel (mobile-only app) ===
-   This app now shows the action panel ONLY after long-press via JS+haptics.
-   Remove/override any hover-based reveal to prevent flicker on touch devices.
-*/
-.item:hover .item-actions,
-.item .item-actions:hover,
-.item:focus:hover .item-actions,
-.item:focus-within:hover .item-actions {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transform: none !important;
+    .item-card:hover .item-actions {
+        display: inline-flex;
+        pointer-events: auto;
+    }
 }

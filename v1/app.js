@@ -5,9 +5,9 @@ createApp({
         return { 
             actionsAnimating: false,
             actionsAnimUntil: 0,
-            pointerTimers: {},     // pressTimers에서 변경
-            pointerActive: {},     // pressActive에서 변경
-            appTitle: '촬영 체크리스트',
+            pointerTimers: {},
+            pointerActive: {},
+            appTitle: '원판 체크리스트',
             editingTitle: false,
             tempTitle: '',
             showModal: false,
@@ -15,20 +15,20 @@ createApp({
             showDescriptionModal: false,
             showPresetModal: false,
             showMenu: false,
-            modalMode: 'add', // 'add' or 'edit'
+            modalMode: 'add',
             modalData: { text: '', description: '' },
             editingItem: null,
             selectedItem: null,
             showNumbers: false,
             isDarkMode: false,
             uiLocked: false,
-            trashItems: [], // 삭제된 항목들
-            presets: {}, // 프리셋 저장소
-            selectedPresetSlot: null, // 선택된 프리셋 슬롯
+            trashItems: [],
+            presets: {},
+            selectedPresetSlot: null,
             sortableInstance: null,
             activeActions: null,
-            actionTimeout: null,
-            hoverTimeout: null,
+            actionsTimeout: null,
+            actionsKeepAlive: false,
             photoList: [
                 { id: 1, text: '신랑신부 포즈컷', description: '', completed: false },
                 { id: 2, text: '신부 포즈컷', description: '', completed: false },
@@ -39,10 +39,13 @@ createApp({
                 { id: 7, text: '신부측 직계가족', description: '', completed: false },
                 { id: 8, text: '직장동료 우인', description: '', completed: false },
                 { id: 9, text: '부케 던지기', description: '', completed: false },
-                { id: 10, text: '플래시 컷', description: '', completed: false }
+                { id: 10, text: '플래시 컷', description: '', completed: false },
+                { id: 11, text: '주례', description: '', completed: false }
             ],
-            nextId: 11,
-            pointers: {}  // touches에서 변경
+            nextId: 12,
+            pointers: {},
+            isPointerPressed: false,
+            pointerStartTime: 0
         }
     },
     
@@ -65,7 +68,6 @@ createApp({
             },
             deep: true
         },
-        
         isDarkMode() {
             this.saveToStorage();
             this.applyTheme();
@@ -81,69 +83,116 @@ createApp({
         this.loadPresets();
         this.initializeTheme();
         this.initSortable();
-        
-        // 메뉴 외부 클릭 시 닫기
         document.addEventListener('click', this.handleOutsideClick);
     },
     
     methods: {
-        // --- Unified actions controller ---
-        openActions(itemId, ms) {
+        clearAllTimers(id = null) {
+            if (id) {
+                if (this.pointerTimers[id]) {
+                    clearTimeout(this.pointerTimers[id]);
+                    delete this.pointerTimers[id];
+                }
+            }
+            if (this.actionsTimeout) {
+                clearTimeout(this.actionsTimeout);
+                this.actionsTimeout = null;
+            }
+        },
+
+        getCardElById(id){
+            const list = this.$el.querySelectorAll('.list-item');
+            for(const li of list){
+                if(String(li.getAttribute('data-id')) === String(id)){
+                    return li.querySelector('.item-card');
+                }
+            }
+            return null;
+        },
+
+        // --- 완전 통합된 액션 시스템 ---
+        showActions(itemId, autoHideDuration = null) {
             if (this.uiLocked) return;
-            this.clearHoverTimeout();
-            this.clearActionTimeout();
+            
+            this.clearAllTimers();
             this.activeActions = itemId;
-            // default auto-hide durations
-            const autoMs = (typeof ms === 'number')
-                ? ms
-                : (this.isPointerFine ? 6000 : 3000);
-            this.startActionHideTimer(autoMs);
-            // Mobile-only initial animation guard
+            
+            // 디바이스별 기본 지속시간 (단순화)
+            const duration = autoHideDuration || (this.isPointerFine ? 6000 : 3000);
+            
+            // 애니메이션 가드 (필요시에만)
             if (!this.isPointerFine) {
                 this.actionsAnimating = true;
                 this.actionsAnimUntil = performance.now() + 260;
                 setTimeout(() => { this.actionsAnimating = false; }, 260);
             }
+            
+            this.scheduleHideActions(duration);
         },
-        closeActions() {
-            this.clearActionTimeout();
-            this.clearHoverTimeout();
+
+        hideActions() {
+            this.clearAllTimers();
             this.activeActions = null;
-        },
-        resetActionTimer(ms) {
-            // restart auto-hide with provided ms
-            this.startActionHideTimer(ms);
+            this.actionsKeepAlive = false;
         },
 
-        onCardPointerEnter(e, itemId){
-            if (this.uiLocked) return;
-            // Only desktop mouse should trigger hover actions
-            if (!(e && e.pointerType === 'mouse')) return;
-            this.showItemActionsOnHover(itemId);
-        },
-        onCardPointerLeave(e, itemId){
-            if (this.uiLocked) return;
-            if (!(e && e.pointerType === 'mouse')) return;
-            this.hideItemActionsOnHover(itemId);
-        },
-
-        guardAction(fn){
-            // Block actions on mobile while actions panel is animating in
-            if (!this.isPointerFine) {
-                if (this.actionsAnimating || (this.actionsAnimUntil && performance.now() < this.actionsAnimUntil)) {
-                    return;
+        scheduleHideActions(ms) {
+            this.clearAllTimers();
+            if (this.actionsKeepAlive) return;
+            
+            this.actionsTimeout = setTimeout(() => {
+                if (!this.actionsKeepAlive) {
+                    this.activeActions = null;
                 }
+            }, ms);
+        },
+
+        keepActionsAlive() {
+            this.actionsKeepAlive = true;
+            this.clearAllTimers();
+        },
+
+        releaseActionsKeepAlive() {
+            this.actionsKeepAlive = false;
+            this.scheduleHideActions(1500); // 통합된 지연시간
+        },
+
+        guardAction(fn) {
+            if (!this.isPointerFine && this.actionsAnimating) {
+                return;
             }
             try { fn && fn(); } catch(e) {}
         },
 
-        // 통합된 포인터 시작 처리 (터치와 마우스 모두 처리)
-        onItemPointerDown(e, id){
-			// 스와이프 트래킹 안정화
-			try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch(_) {}
-            this.pointerActive[id] = true;
+        onCardPointerEnter(e, itemId) {
+            if (this.uiLocked) return;
+            // 모든 포인터 타입에서 호버 동작 (데스크탑/터치 구분 없음)
+            if (e.pointerType === 'mouse' && this.isPointerFine) {
+                this.showActions(itemId, 6000);
+            }
+        },
+
+        onCardPointerLeave(e, itemId) {
+            if (this.uiLocked) return;
+            if (e.pointerType === 'mouse' && this.isPointerFine) {
+                this.clearAllTimers();
+                this.actionsTimeout = setTimeout(() => {
+                    if (this.activeActions === itemId && !this.actionsKeepAlive) {
+                        this.hideActions();
+                    }
+                }, 300);
+            }
+        },
+
+        onItemPointerDown(e, id) {
+            // 포인터 캡처
+            try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch(_) {}
             
-            // 포인터 좌표 추출 (터치나 마우스 모두 처리)
+            this.pointerActive[id] = true;
+            this.isPointerPressed = true;
+            this.pointerStartTime = performance.now();
+            
+            // 좌표 저장 (모든 포인터 타입 통합)
             const clientX = e.clientX;
             const clientY = e.clientY;
             
@@ -152,28 +201,27 @@ createApp({
             }
 
             const el = this.getCardElById(id);
-            if(el) {
+            if (el) {
                 el.classList.add('drag-arming');
             }
             
-            // Haptic + show actions after 220ms if still pressing
-            if(this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
+            // 통합된 롱프레스 감지 (모든 디바이스)
+            if (this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
             this.pointerTimers[id] = setTimeout(() => {
-                if(this.pointerActive[id]) {
-                    try { if (!this.isPointerFine) this.showItemActions(id); } catch(_){}
+                if (this.pointerActive[id]) {
+                    // 롱프레스시 항상 액션 표시 (디바이스 구분 없음)
+                    this.showActions(id);
                     if (navigator && navigator.vibrate) { navigator.vibrate(12); }
                 }
-            }, 220);
+            }, 500); // 약간 더 긴 지연시간으로 통합
         },
         
-        // 통합된 포인터 이동 처리
-        onItemPointerMove(e, item){
+        onItemPointerMove(e, item) {
             if (this.uiLocked) return;
             
             const id = item && item.id;
             const state = this.pointers[id] || {};
             
-            // 포인터가 눌린 상태가 아니면 무시 (중요!)
             if (!this.pointerActive[id] || !state.sx) return;
             
             const clientX = e.clientX;
@@ -185,20 +233,19 @@ createApp({
             const dy = clientY - (state.sy || 0);
             const el = this.getCardElById(id);
 
-			// 길게누름(액션 열기)만 취소하고, 스와이프 트래킹은 유지
-			if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
-				if (this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
-				// ! pointerActive를 false로 두면 이후 스와이프 로직이 전부 return 됩니다.
-			}
+            // 드래그 감지시 롱프레스 취소 (통합)
+            if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+                if (this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
+            }
 
-            // 수평 제스처
+            // 수평 스와이프 감지 (모든 디바이스 동일)
             const hori = Math.abs(dx) >= 12 && Math.abs(dx) > Math.abs(dy) * 1.5;
             if (el) {
                 const tx = Math.max(-72, Math.min(dx, 72));
                 el.style.transform = `translateX(${tx}px)`;
             }
 
-            // 오른쪽 스와이프 → 체크 완료
+            // 체크 토글 (통합된 로직)
             if (hori && dx > 42 && !state.toggled && !item.completed) {
                 this.toggleComplete(item);
                 state.toggled = true;
@@ -206,7 +253,6 @@ createApp({
                 try { if (navigator && navigator.vibrate) navigator.vibrate(12); } catch(_) {}
             }
 
-            // 왼쪽 스와이프 → 체크 해제
             if (hori && dx < -42 && !state.toggled && item.completed) {
                 this.toggleComplete(item);
                 state.toggled = true;
@@ -215,15 +261,16 @@ createApp({
             }
         },
 
-        // 통합된 포인터 종료 처리
-        onItemPointerUp(e, id){
+        onItemPointerUp(e, id) {
             this.pointerActive[id] = false;
+            this.isPointerPressed = false;
 
-			try { 
-				e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId);
-			} catch(_) {}            
+            try { 
+                e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId);
+            } catch(_) {}            
 
-			try {
+            // 정리 작업 (통합)
+            try {
                 const el = this.getCardElById(id);
                 if (el) {
                     el.style.transform = '';
@@ -231,25 +278,23 @@ createApp({
                 if (this.pointers[id]) delete this.pointers[id];
             } catch(_) {}
 
-            if(this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
+            this.clearAllTimers(id);
             const el = this.getCardElById(id);
-            // If not actively dragging, remove arming quickly
-            if(el && !el.classList.contains('dragging')) {
+            if (el && !el.classList.contains('dragging')) {
                 el.classList.remove('drag-arming');
             }
         },
-        
-        getCardElById(id){
-            const list = this.$el.querySelectorAll('.list-item');
-            for(const li of list){
-                if(String(li.getAttribute('data-id')) === String(id)){
-                    return li.querySelector('.item-card');
-                }
-            }
-            return null;
+
+        // --- 액션 패널 이벤트 (단순화됨) ---
+        onActionsEnter() {
+            this.keepActionsAlive();
         },
-    
-        // 항목 추가 관련
+
+        onActionsLeave() {
+            this.releaseActionsKeepAlive();
+        },
+
+        // --- 기존 메서드들 (변경 없음) ---
         showAddInput() {
             if (this.uiLocked) return;
             this.modalMode = 'add';
@@ -304,19 +349,15 @@ createApp({
             this.cancelModal();
         },
 
-        // 제목 클릭 비활성화 (스와이프로 통일)
-        clickTitle(item, e){
-            // 스와이프로 통일하므로 클릭 동작 비활성화
+        clickTitle(item, e) {
             return;
         },
         
-        // 체크박스 토글
         toggleComplete(item) {
             item.completed = !item.completed;
             try { this.saveToStorage && this.saveToStorage(); } catch (e) {}
         },
 
-        // UI 제어
         toggleTheme() {
             this.isDarkMode = !this.isDarkMode;
             this._themeAutoFollow = false;
@@ -335,7 +376,6 @@ createApp({
         
         initializeTheme() {
             const THEME_KEY = 'kpagChecklist:theme';
-            // 1) 저장된 테마 우선
             try {
                 const saved = localStorage.getItem(THEME_KEY);
                 if (saved === 'dark' || saved === 'light') {
@@ -350,26 +390,20 @@ createApp({
             }
             this.applyTheme();
 
-            // 2) 시스템 변경 감지
             if (window.matchMedia) {
                 const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                const handler = (e) => {
+                    if (this._themeAutoFollow !== false) {
+                        this.isDarkMode = e.matches;
+                        try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+                        this.applyTheme();
+                    }
+                };
+                
                 try {
-                    mq.addEventListener('change', (e) => {
-                        if (this._themeAutoFollow !== false) {
-                            this.isDarkMode = e.matches;
-                            try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                            this.applyTheme();
-                        }
-                    });
+                    mq.addEventListener('change', handler);
                 } catch (err) {
-                    // (구형) 폴백
-                    mq.addListener((e) => {
-                        if (this._themeAutoFollow !== false) {
-                            this.isDarkMode = e.matches;
-                            try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                            this.applyTheme();
-                        }
-                    });
+                    mq.addListener(handler);
                 }
             }
         },
@@ -384,59 +418,6 @@ createApp({
             this.showMenu = false;
         },
 
-        // 항목 액션 버튼 제어
-        showItemActions(itemId) { this.openActions(itemId); },
-
-        showItemActionsOnHover(itemId) {
-            if (!this.isPointerFine) return;
-            if (this.uiLocked) return;
-            this.openActions(itemId, 6000);
-        },
-
-        hideItemActionsOnHover(itemId) {
-            if (this.uiLocked) return;
-            this.clearHoverTimeout();
-            this.hoverTimeout = setTimeout(() => {
-                if (this.activeActions === itemId) {
-                    this.closeActions();
-                }
-            }, 300);
-        },
-
-        startActionHideTimer(ms) {
-            this.clearActionTimeout();
-            if (this.keepActions) return; // do not start if hovering over actions
-            this.actionTimeout = setTimeout(() => {
-                if (!this.keepActions) this.activeActions = null;
-            }, ms);
-        },
-
-        clearActionTimeout() {
-            if (this.actionTimeout) {
-                clearTimeout(this.actionTimeout);
-                this.actionTimeout = null;
-            }
-        },
-
-        onActionsEnter() {
-            this.keepActions = true;
-            this.clearActionTimeout();
-        },
-
-        onActionsLeave() {
-            this.keepActions = false;
-            // after leaving actions, start a shorter grace period
-            this.startActionHideTimer(this.isPointerFine ? 1800 : 1200);
-        },
-
-        clearHoverTimeout() {
-            if (this.hoverTimeout) {
-                clearTimeout(this.hoverTimeout);
-                this.hoverTimeout = null;
-            }
-        },
-
-        // 특이사항 팝업
         showDescriptionPopup(item) {
             this.selectedItem = item;
             this.showDescriptionModal = true;
@@ -450,43 +431,32 @@ createApp({
         removeItem(id) {
             if (this.uiLocked) return;
             
-            // 액션 버튼 숨김
-            this.activeActions = null;
-            this.clearActionTimeout();
-            this.clearHoverTimeout();
+            this.hideActions();
             
             const item = this.photoList.find(item => item.id === id);
             if (!item) return;
             
-            // 휴지통 '원(링)' bounce 애니메이션 (버튼 ::before를 애니메이션)
             const trashBtn = document.querySelector('.trash-btn');
             if (trashBtn) {
                 trashBtn.classList.remove('ring-bounce');
-                void trashBtn.offsetWidth; // 강제 리플로우
+                void trashBtn.offsetWidth;
                 trashBtn.classList.add('ring-bounce');
-                window.setTimeout(() => {
+                setTimeout(() => {
                     trashBtn.classList.remove('ring-bounce');
                 }, 600);
             }
             
-            // 애니메이션을 위해 요소에 클래스 추가
             const element = this.getCardElById(id);
             if (element) {
                 element.classList.add('item-deleting');
-                
-                // 애니메이션 완료 후 실제 삭제
                 setTimeout(() => {
-                    // 휴지통에 추가
                     this.trashItems.unshift({
                         ...item,
                         deletedAt: new Date().toISOString()
                     });
-                    
-                    // 리스트에서 제거
                     this.photoList = this.photoList.filter(item => item.id !== id);
                 }, 500);
             } else {
-                // 애니메이션이 불가능한 경우 즉시 처리
                 this.trashItems.unshift({
                     ...item,
                     deletedAt: new Date().toISOString()
@@ -504,20 +474,15 @@ createApp({
         },
 
         restoreItem(trashItem) {
-            // 휴지통에서 제거
             this.trashItems = this.trashItems.filter(item => item.id !== trashItem.id);
-            
-            // 리스트 맨 아래에 추가
             const restoredItem = {
                 id: trashItem.id,
                 text: trashItem.text,
                 description: trashItem.description,
-                completed: false // 복구시 체크 해제 상태로
+                completed: false
             };
-            
             this.photoList.push(restoredItem);
             
-            // 짧은 피드백
             const element = this.getCardElById(trashItem.id);
             if (element) {
                 element.style.animation = 'fadeIn 0.5s ease';
@@ -531,19 +496,16 @@ createApp({
             }
         },
 
-        // 모달 제어
         closeAllModals() {
             this.showModal = false;
             this.showTrashModal = false;
             this.showDescriptionModal = false;
             this.showPresetModal = false;
-            
             this.showMenu = false;
             this.selectedItem = null;
             this.selectedPresetSlot = null;
         },
 
-        // 메뉴 제어
         toggleMenu() {
             this.showMenu = !this.showMenu;
         },
@@ -560,7 +522,6 @@ createApp({
             }
         },
 
-        // 프리셋 관련
         openPresetModal() {
             this.showPresetModal = true;
             this.showMenu = false;
@@ -578,7 +539,7 @@ createApp({
         savePreset() {
             if (!this.selectedPresetSlot) return;
             
-            const slotNumber = this.selectedPresetSlot; // 슬롯 번호 미리 저장
+            const slotNumber = this.selectedPresetSlot;
             const presetData = {
                 title: this.appTitle,
                 photoList: JSON.parse(JSON.stringify(this.photoList)),
@@ -595,7 +556,7 @@ createApp({
         loadPreset() {
             if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
             
-            const slotNumber = this.selectedPresetSlot; // 슬롯 번호 미리 저장
+            const slotNumber = this.selectedPresetSlot;
             const preset = this.presets[this.selectedPresetSlot];
             this.appTitle = preset.title;
             this.photoList = JSON.parse(JSON.stringify(preset.photoList));
@@ -609,7 +570,7 @@ createApp({
         clearPreset() {
             if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
             
-            const slotNumber = this.selectedPresetSlot; // 슬롯 번호 미리 저장
+            const slotNumber = this.selectedPresetSlot;
             if (confirm(`프리셋 ${slotNumber}을 삭제하시겠습니까?`)) {
                 delete this.presets[this.selectedPresetSlot];
                 this.savePresets();
@@ -618,7 +579,6 @@ createApp({
             }
         },
 
-        // 기타 유틸리티
         resetAll() {
             this.photoList.forEach(item => {
                 item.completed = false;
@@ -626,7 +586,6 @@ createApp({
             this.showMenu = false;
         },
 
-        // 제목 편집
         startEditTitle() {
             if (this.uiLocked) return;
             this.editingTitle = true;
@@ -652,7 +611,6 @@ createApp({
             this.tempTitle = '';
         },
 
-        // 데이터 저장/로드
         saveToStorage() {
             try {
                 const data = {
@@ -663,7 +621,7 @@ createApp({
                     lastSaved: new Date().toISOString()
                 };
                 localStorage.setItem('kpagChecklist:state', JSON.stringify(data));
-                this._currentData = JSON.stringify(data); // fallback 유지
+                this._currentData = JSON.stringify(data);
             } catch (error) {
                 console.warn('현재 상태 저장 실패:', error);
             }
@@ -688,7 +646,7 @@ createApp({
         savePresets() {
             try {
                 localStorage.setItem('kpagChecklist:presets', JSON.stringify(this.presets));
-                this._presets = JSON.stringify(this.presets); // fallback 유지
+                this._presets = JSON.stringify(this.presets);
             } catch (error) {
                 console.warn('프리셋 저장 실패:', error);
             }
@@ -703,7 +661,6 @@ createApp({
             }
         },
 
-        // 드래그 앤 드롭 초기화
         initSortable() {
             const el = this.$refs.photoListEl;
             if (el && typeof Sortable !== 'undefined') {
@@ -720,40 +677,39 @@ createApp({
                     delay: 220,
                     delayOnTouchOnly: true,
                     onStart: (evt) => { 
-						document.body.style.overflow = 'hidden'; try {
-							const id = evt.item && evt.item.dataset && evt.item.dataset.id;
-							const el = this.getCardElById(id);
-							if (el) {
-								el.classList.add('dragging');
-								el.classList.remove('drag-arming');
-							}
-						} catch(_){}
-					},
-	                onEnd: (evt) => {
-						document.body.style.overflow = '';
-						try {
-							const id = evt.item && evt.item.dataset && evt.item.dataset.id;
-							const el = this.getCardElById(id);
-							if (el) {
-								el.classList.remove('dragging');
-								el.classList.remove('drag-arming');
-							}
-						} catch(_){}
-						const item = this.photoList.splice(evt.oldIndex, 1)[0];
-						this.photoList.splice(evt.newIndex, 0, item); 
-					}
+                        document.body.style.overflow = 'hidden';
+                        try {
+                            const id = evt.item && evt.item.dataset && evt.item.dataset.id;
+                            const el = this.getCardElById(id);
+                            if (el) {
+                                el.classList.add('dragging');
+                                el.classList.remove('drag-arming');
+                            }
+                        } catch(_){}
+                    },
+                    onEnd: (evt) => {
+                        document.body.style.overflow = '';
+                        try {
+                            const id = evt.item && evt.item.dataset && evt.item.dataset.id;
+                            const el = this.getCardElById(id);
+                            if (el) {
+                                el.classList.remove('dragging');
+                                el.classList.remove('drag-arming');
+                            }
+                        } catch(_){}
+                        const item = this.photoList.splice(evt.oldIndex, 1)[0];
+                        this.photoList.splice(evt.newIndex, 0, item); 
+                    }
                 });
             }
         }
     },
 
-    // 컴포넌트 언마운트 시 정리
     beforeUnmount() {
         if (this.sortableInstance) {
             this.sortableInstance.destroy();
         }
-        this.clearActionTimeout();
-        this.clearHoverTimeout();
+        this.clearAllTimers();
         document.removeEventListener('click', this.handleOutsideClick);
     }
 }).mount('#app');
