@@ -342,15 +342,15 @@ body {
 
 .item-card.drag-arming {
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px var(--primary) inset, 0 8px 18px rgba(0,0,0,0.10);
+    box-shadow: 0 0 0 5px var(--primary) inset, 0 8px 18px rgba(0,0,0,0.10);
     transform: translateZ(0) scale(0.985);
     transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
 .item-card.dragging {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px var(--primary) inset, 0 10px 26px rgba(0,0,0,0.16);
-    transform: translateZ(0) scale(1.02);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 5px var(--primary) inset, 0 10px 26px rgba(0,0,0,0.16);
+  transform: translateZ(0) scale(1.02);
 }
 
 /*--------------- 메뉴 ----------------*/
@@ -384,7 +384,7 @@ body {
     border-radius: 6px;
     box-shadow: 0 4px 12px var(--shadow-light);
     z-index: 1060;
-    margin-top: 4px;
+    margin-top: -6px;
     padding: 8px 0;
     display: block;
 }
@@ -395,7 +395,7 @@ body {
 
 .dropdown-item {
     padding: 8px 16px;
-    color: var(--text-primary);
+    color: var(--text-secondary);
     cursor: pointer;
     border: none;
     background: none;
@@ -409,6 +409,7 @@ body {
 }
 
 .dropdown-item:hover {
+    color: var(--text-primary);
     background-color: var(--item-hover-bg);
 }
 
@@ -793,31 +794,78 @@ body {
         pointer-events: auto;
     }
 }
+/* Theme-aware subtitle & separator (corrected for data-theme) */
+.dropdown-subtitle { color: rgba(0,0,0,0.66); font-size:0.8em; margin-left:1em; }
+[data-theme="dark"] .dropdown-subtitle { color: rgba(255,255,255,0.80); }
+.dropdown-sep { height: 1px; margin: 6px 8px; background: rgba(0,0,0,0.16); }
+[data-theme="dark"] .dropdown-sep { background: rgba(255,255,255,0.30); }
 
-/* Centered Toast */
-.toast-center { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(20,20,20,0.9); color: #fff; padding: 0.9rem 1.1rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 9999; pointer-events: none; font-size: 0.95rem; min-width: 12rem; text-align: center; }
-body.light .toast-center { background: rgba(250,250,250,0.98); color: #111; box-shadow: 0 8px 24px rgba(0,0,0,0.15);}
-
-/* Floating Toast Box (bottom-center) */
-.toast-box { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 10px 14px; border-radius: 12px; background: rgba(20,20,20,0.92); color: #fff; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 26px rgba(0,0,0,0.25); z-index: 9999; pointer-events: none; font-size: 0.95rem; line-height: 1.25rem; max-width: min(92vw, 30rem); text-align: center; opacity: 1; transition: opacity .25s ease, transform .25s ease; }
-body.light .toast-box { background: rgba(255,255,255,0.96); color: #111; border-color: rgba(0,0,0,0.12); box-shadow: 0 10px 26px rgba(0,0,0,0.18); }
-
-
-/* Toast: Center pulse animation (1s in, 1s out) */
-.toast-box { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 16px; border-radius: 12px; background: rgba(20,20,20,0.92); color: #fff; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 14px 30px rgba(0,0,0,0.30); pointer-events: none; z-index: 9999; font-size: 0.95rem; line-height: 1.25rem; text-align: center; max-width: min(92vw, 30rem); }
-body.light .toast-box { background: rgba(255,255,255,0.98); color: #111; border-color: rgba(0,0,0,0.14); box-shadow: 0 14px 30px rgba(0,0,0,0.22); }
-.toast-anim { animation: toastPulse 2s ease-in-out forwards; }
-@keyframes toastPulse {  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.98); }  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.98); }}
+/* Font scaling */
+:root { --font-scale: 1; }
+.app-title { font-size: calc(1.5rem * var(--font-scale)); line-height: calc(1.2 * var(--font-scale)); }
+.item-title { font-size: calc(1rem * var(--font-scale)); line-height: calc(1.35 * var(--font-scale)); }
+.item-description span { font-size: calc(0.95rem * var(--font-scale)); line-height: calc(1.35 * var(--font-scale)); }
+.trash-item-desc { font-size: calc(0.95rem * var(--font-scale)); line-height: calc(1.35 * var(--font-scale)); }
 
 
-/* Toast center override to prevent vertical stretching */
-.toast-box {
-  top: 50% !important;
-  left: 50% !important;
-  right: auto !important;
-  bottom: auto !important;
-  transform: translate(-50%, -50%) !important;
-  height: auto !important;
-  max-height: none !important;
-  width: auto; /* shrink to content with padding */
+/* ================= Drag & Drop state (single source of truth) ================= */
+.item-card { border-style: solid; } /* ensure a baseline */
+
+.item-card.drag-arming {
+    /* light pre-drag hint */
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+    transform: translateZ(0) scale(0.985);
 }
+
+.item-card.dragging {
+    /* the card being dragged */
+    border-style: solid !important;
+    box-shadow: 0 10px 26px rgba(0,0,0,1);
+    transform: translateZ(0) scale(1.02);
+}
+
+.item-card.drop-target {
+    /* where the card would land */
+    border-style: dashed !important;
+    border-width: 2px !important;
+    border-color: var(--primary) !important;
+    box-shadow: none !important;
+}
+/* ============================================================================ */
+
+
+/* === SortableJS ghost placeholder as drop indicator === */
+.sortable-ghost.item-card,
+.item-card.sortable-ghost {
+    border-style: dashed !important;
+    border-width: 2px !important;
+    border-color: var(--primary) !important;
+    box-shadow: none !important;
+    opacity: 1 !important; /* keep visible rather than faded */
+}
+
+
+/* === Robust ghost/placeholder highlight =============================== */
+.dq-ghost > .item-card,
+.dq-ghost .item-card,
+li.dq-ghost > .item-card,
+.sortable-ghost > .item-card,
+.sortable-ghost .item-card,
+.item-card.dq-ghost,
+.item-card.sortable-ghost {
+    border-style: dashed !important;
+    border-width: 2px !important;
+    border-color: var(--primary) !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+}
+/* Also keep the dragged clone solid to avoid confusion */
+.dq-drag > .item-card,
+.dq-chosen > .item-card,
+.item-card.dq-drag,
+.item-card.dq-chosen {
+    border-style: solid !important;
+}
+/* ====================================================================== */

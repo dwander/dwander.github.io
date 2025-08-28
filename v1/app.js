@@ -1,3 +1,4 @@
+const STORAGE_KEY_SETTINGS = 'checklist:settings';
 const STORAGE_KEY_STATE = 'checklist:state';
 const STORAGE_KEY_PRESETS = 'checklist:presets';
 const STORAGE_KEY_THEME = 'checklist:theme';
@@ -6,7 +7,8 @@ const { createApp } = Vue;
 
 const app = createApp({
     data(){ 
-        return { _toastEl: null, _toastTimer: null, toastVisible: false, toastMessage: '', toastTimer: null, _saveTimer: null, _saveQueued: false, _rafMap: new Map(), actionsAnimating: false,
+        return { fontScale: 1,  
+            _saveTimer: null, _saveQueued: false, _rafMap: new Map(), actionsAnimating: false,
             actionsAnimUntil: 0,
             pointerTimers: {},
             pointerActive: {},
@@ -83,41 +85,21 @@ const app = createApp({
     mounted() {
         this.isPointerFine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
         this.loadFromStorage();
+        this.loadSettings();
+        this.applyFontScale();
         this.loadPresets();
         this.initializeTheme();
         this.initSortable();
+        if (this.uiLocked && this.sortableInstance) { try { this.sortableInstance.option('disabled', true); } catch(_) {} }
         document.addEventListener('click', this.handleOutsideClick);
     },
     
     methods: {
-        // 한국어 조사 자동 선택: pair 예) '이가', '을를', '은는', '과와'
-        josa(value, pair = '이가') {
-            try {
-                const s = String(value).trim();
-                const last = s.charAt(s.length - 1);
-                const code = last.charCodeAt(0);
-                const pick = (withJong) => withJong ? pair[0] : pair[1];
-                // 한글 음절 범위
-                if (code >= 0xAC00 && code <= 0xD7A3) {
-                    const jong = (code - 0xAC00) % 28; // 0이면 받침 없음
-                    return pick(jong != 0);
-                }
-                // 숫자(마지막 자리 발음의 받침 여부 기반)
-                if (/\d/.test(last)) {
-                    const d = parseInt(last, 10);
-                    const hasJong = [0,1,3,6,7,8].includes(d); // 영,일,삼,육,칠,팔 → 받침 O
-                    return pick(hasJong);
-                }
-                // 기타 문자: 기본적으로 받침 없음 취급
-                return pick(false);
-            } catch(_) { return pair[1]; }
-        },
-        showToast(message = '완료되었습니다.', duration = 2000) {
-            try { if (this.toastTimer) clearTimeout(this.toastTimer); } catch(_) {}
-            this.toastMessage = message;
-            this.toastVisible = true;
-            this.toastTimer = setTimeout(() => { this.toastVisible = false; }, duration);
-        },
+        saveSettings() { try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify({ uiLocked: this.uiLocked, fontScale: this.fontScale })); } catch(_) {} },
+        loadSettings() { try { const raw = localStorage.getItem(STORAGE_KEY_SETTINGS); if (raw) { const s = JSON.parse(raw); if (typeof s.uiLocked==='boolean') this.uiLocked = s.uiLocked; if (typeof s.fontScale==='number') this.fontScale = s.fontScale; } } catch(_) {} },
+        applyFontScale() { try { document.documentElement.style.setProperty('--font-scale', String(this.fontScale || 1)); } catch(_) {} },
+        incFont() { this.fontScale = Math.min(1.5, Math.round(((this.fontScale || 1) + 0.05)*100)/100); this.applyFontScale(); this.saveSettings(); },
+        decFont() { this.fontScale = Math.max(0.75, Math.round(((this.fontScale || 1) - 0.05)*100)/100); this.applyFontScale(); this.saveSettings(); },
         clearAllTimers(id = null) {
             if (id) {
                 if (this.pointerTimers[id]) {
@@ -426,6 +408,8 @@ const app = createApp({
             try { localStorage.setItem(STORAGE_KEY_THEME, this.isDarkMode ? 'dark' : 'light') } catch(_) {}
             this.applyTheme();
             this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+
         },
 
         applyTheme() {
@@ -481,6 +465,8 @@ if (saved === 'dark' || saved === 'light') {
                 this.sortableInstance.option('disabled', false);
             }
             this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+
         },
 
         showDescriptionPopup(item) {
@@ -567,6 +553,8 @@ if (saved === 'dark' || saved === 'light') {
             this.showDescriptionModal = false;
             this.showPresetModal = false;
             this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+
             this.selectedItem = null;
             this.selectedPresetSlot = null;
         },
@@ -583,6 +571,8 @@ if (saved === 'dark' || saved === 'light') {
                 if (menuButton && !menuButton.contains(event.target) && 
                     dropdownMenu && !dropdownMenu.contains(event.target)) {
                     this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+
                 }
             }
         },
@@ -590,14 +580,15 @@ if (saved === 'dark' || saved === 'light') {
         openPresetModal() {
             this.showPresetModal = true;
             this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+
         },
 
         closePresetModal() {
             this.showPresetModal = false;
             this.selectedPresetSlot = null;
-            // focus restore
-            this.$nextTick(() => { try { this.$refs.menuButton && this.$refs.menuButton.focus(); } catch(_) {} });
         },
+
         selectPresetSlot(slot) {
             this.selectedPresetSlot = slot;
         },
@@ -616,8 +607,8 @@ if (saved === 'dark' || saved === 'light') {
             
             this.presets[this.selectedPresetSlot] = presetData;
             this.savePresets();
-            this.closePresetModal(); this.showToast(`프리셋 ${slotNumber}${this.josa(slotNumber,'이가')} 저장되었습니다.`);
-            },
+            alert(`프리셋 ${slotNumber}에 저장되었습니다.`);
+        },
 
         loadPreset() {
             if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
@@ -625,23 +616,23 @@ if (saved === 'dark' || saved === 'light') {
             const slotNumber = this.selectedPresetSlot;
             const preset = this.presets[this.selectedPresetSlot];
             this.appTitle = preset.title;
-            this.items = JSON.parse(JSON.stringify(preset.items || []));
+            this.items = JSON.parse(JSON.stringify(preset.items || preset.items || []));
             this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
             this.nextId = preset.nextId;
             
             this.closePresetModal();
-            this.showToast(`프리셋 ${slotNumber}${this.josa(slotNumber,'을를')} 불러왔습니다.`);
+            alert(`프리셋 ${slotNumber}을 불러왔습니다.`);
         },
 
         clearPreset() {
             if (!this.selectedPresetSlot || !this.presets[this.selectedPresetSlot]) return;
+            
             const slotNumber = this.selectedPresetSlot;
             if (confirm(`프리셋 ${slotNumber}을 삭제하시겠습니까?`)) {
                 delete this.presets[this.selectedPresetSlot];
                 this.savePresets();
-                this.closePresetModal();
-                this.showToast(`프리셋 ${slotNumber}${this.josa(slotNumber,'이가')} 삭제되었습니다.`);
                 this.selectedPresetSlot = null;
+                alert('프리셋이 삭제되었습니다.');
             }
         },
 
@@ -650,6 +641,8 @@ if (saved === 'dark' || saved === 'light') {
                 item.completed = false;
             });
             this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+
         },
 
         startEditTitle() {
@@ -700,7 +693,8 @@ if (saved === 'dark' || saved === 'light') {
                 const data = JSON.parse(raw);
                 if (data && typeof data === 'object') {
                     this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-                    this.items = Array.isArray(data.items) ? data.items : this.items;
+                    this.items = Array.isArray(data.items) ? data.items
+                        : (Array.isArray(data.items) ? data.items : this.items);
                     this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
                     this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
                 }
@@ -736,13 +730,18 @@ if (saved === 'dark' || saved === 'light') {
                 
                 this.sortableInstance = new Sortable(el, {
                     animation: 150,
-                    ghostClass: 'sortable-ghost',
                     forceFallback: true,
                     fallbackTolerance: 3,
                     touchStartThreshold: 6,
                     delay: 220,
                     delayOnTouchOnly: true,
-                    onStart: (evt) => { 
+                    ghostClass: "dq-ghost",
+                    chosenClass: "dq-chosen",
+                    dragClass: "dq-drag",
+
+
+                    onStart: (evt) => {
+
                         document.body.style.overflow = 'hidden';
                         try {
                             const id = evt.item && evt.item.dataset && evt.item.dataset.id;
@@ -751,8 +750,8 @@ if (saved === 'dark' || saved === 'light') {
                                 el.classList.add('dragging');
                                 el.classList.remove('drag-arming');
                             }
-                        } catch(_){}
-                    },
+                        } catch(_) {}
+                        },
                     onEnd: (evt) => {
                         document.body.style.overflow = '';
                         try {
@@ -762,21 +761,24 @@ if (saved === 'dark' || saved === 'light') {
                                 el.classList.remove('dragging');
                                 el.classList.remove('drag-arming');
                             }
-                        } catch(_){}
+                        } catch(_) {}
+                        if (this._lastDropTarget) {
+                            try { this._lastDropTarget.classList.remove('drop-target'); } catch(_) {}
+                            }
                         const item = this.items.splice(evt.oldIndex, 1)[0];
-                        this.items.splice(evt.newIndex, 0, item); 
-                    }
-                });
-            }
-        }
-    },
+                        this.items.splice(evt.newIndex, 0, item);
+                    },
 
+                    });
+            }
+        },
+    },
     beforeUnmount() {
-        try { if (this._mqCleanup) { this._mqCleanup(); } } catch(_) {}
-        try { if (this.sortableInstance) { this.sortableInstance.destroy(); } } catch(_) {}
-        try { this.clearAllTimers && this.clearAllTimers(); } catch(_) {}
-        try { document.removeEventListener('click', this.handleOutsideClick); } catch(_) {}
-        try { if (this._toastEl) { this._toastEl.remove(); this._toastEl = null; } } catch(_) {}
+        if (this.sortableInstance) {
+            this.sortableInstance.destroy();
+        }
+        this.clearAllTimers();
+        document.removeEventListener('click', this.handleOutsideClick);
     }
 });
 app.mount('#app');
