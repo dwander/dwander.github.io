@@ -7,7 +7,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <!-- CSS 파일 링크 -->
     <link rel="stylesheet" href="layout.css">
 </head>
 <body>
@@ -68,22 +67,22 @@
                         <div class="dropdown-sep" role="separator"></div>
                         <div class="dropdown-subtitle">글자 크기</div>
                         <button class="dropdown-item" @click="incFont">
-							<svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-							크게
-						</button>
+                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            크게
+                        </button>
                         <button class="dropdown-item" @click="decFont">
-							<svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-							작게
-						</button>
+                            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            작게
+                        </button>
 
                         <div class="dropdown-sep" role="separator"></div>
 
-						<button class="dropdown-item" @click="toggleUILock">
+                        <button class="dropdown-item" @click="toggleUILock">
                             <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                 <circle v-if="!uiLocked" cx="12" cy="7" r="4"></circle>
@@ -201,7 +200,6 @@
                 </li>
             </ul>
 
-            <!-- 나머지 모달들은 동일하게 유지 -->
             <!-- 모달 배경 -->
             <div 
                 v-if="showModal || showTrashModal || showDescriptionModal || showPresetModal" 
@@ -439,9 +437,8 @@
                 <div v-if="trashItems.length > 0" class="btn-badge">{{ trashItems.length }}</div>
             </button>
         </div>
-</div>
+    </div>
 
-    <!-- JavaScript 파일 링크 -->
-<script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

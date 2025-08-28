@@ -6,13 +6,17 @@ const STORAGE_KEY_THEME = 'checklist:theme';
 const { createApp } = Vue;
 
 const app = createApp({
-    data(){ 
-        return { fontScale: 1,  
-            _saveTimer: null, _saveQueued: false, _rafMap: new Map(), actionsAnimating: false,
+    data() { 
+        return { 
+            fontScale: 1,  
+            _saveTimer: null, 
+            _saveQueued: false, 
+            _rafMap: new Map(), 
+            actionsAnimating: false,
             actionsAnimUntil: 0,
             pointerTimers: {},
             pointerActive: {},
-            appTitle: '원판 체크리스트',
+            appTitle: '촬영 체크리스트',
             editingTitle: false,
             tempTitle: '',
             showModal: false,
@@ -90,16 +94,55 @@ const app = createApp({
         this.loadPresets();
         this.initializeTheme();
         this.initSortable();
-        if (this.uiLocked && this.sortableInstance) { try { this.sortableInstance.option('disabled', true); } catch(_) {} }
+        if (this.uiLocked && this.sortableInstance) { 
+            try { 
+                this.sortableInstance.option('disabled', true); 
+            } catch(_) {} 
+        }
         document.addEventListener('click', this.handleOutsideClick);
     },
     
     methods: {
-        saveSettings() { try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify({ uiLocked: this.uiLocked, fontScale: this.fontScale })); } catch(_) {} },
-        loadSettings() { try { const raw = localStorage.getItem(STORAGE_KEY_SETTINGS); if (raw) { const s = JSON.parse(raw); if (typeof s.uiLocked==='boolean') this.uiLocked = s.uiLocked; if (typeof s.fontScale==='number') this.fontScale = s.fontScale; } } catch(_) {} },
-        applyFontScale() { try { document.documentElement.style.setProperty('--font-scale', String(this.fontScale || 1)); } catch(_) {} },
-        incFont() { this.fontScale = Math.min(1.5, Math.round(((this.fontScale || 1) + 0.05)*100)/100); this.applyFontScale(); this.saveSettings(); },
-        decFont() { this.fontScale = Math.max(0.75, Math.round(((this.fontScale || 1) - 0.05)*100)/100); this.applyFontScale(); this.saveSettings(); },
+        // 설정 관련 메서드
+        saveSettings() { 
+            try { 
+                localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify({ 
+                    uiLocked: this.uiLocked, 
+                    fontScale: this.fontScale 
+                })); 
+            } catch(_) {} 
+        },
+        
+        loadSettings() { 
+            try { 
+                const raw = localStorage.getItem(STORAGE_KEY_SETTINGS); 
+                if (raw) { 
+                    const s = JSON.parse(raw); 
+                    if (typeof s.uiLocked === 'boolean') this.uiLocked = s.uiLocked; 
+                    if (typeof s.fontScale === 'number') this.fontScale = s.fontScale; 
+                } 
+            } catch(_) {} 
+        },
+        
+        applyFontScale() { 
+            try { 
+                document.documentElement.style.setProperty('--font-scale', String(this.fontScale || 1)); 
+            } catch(_) {} 
+        },
+        
+        incFont() { 
+            this.fontScale = Math.min(1.5, Math.round(((this.fontScale || 1) + 0.05) * 100) / 100); 
+            this.applyFontScale(); 
+            this.saveSettings(); 
+        },
+        
+        decFont() { 
+            this.fontScale = Math.max(0.75, Math.round(((this.fontScale || 1) - 0.05) * 100) / 100); 
+            this.applyFontScale(); 
+            this.saveSettings(); 
+        },
+
+        // 타이머 및 유틸리티
         clearAllTimers(id = null) {
             if (id) {
                 if (this.pointerTimers[id]) {
@@ -113,9 +156,8 @@ const app = createApp({
             }
         },
 
-        getCardElById(id){
+        getCardElById(id) {
             try {
-                // Faster direct lookup via attribute selector (no full list scan)
                 const el = this.$el.querySelector(`.list-item[data-id="${id}"] .item-card`);
                 return el || null;
             } catch(_) {
@@ -123,17 +165,15 @@ const app = createApp({
             }
         },
 
-        // --- 완전 통합된 액션 시스템 ---
+        // 액션 시스템
         showActions(itemId, autoHideDuration = null) {
             if (this.uiLocked) return;
             
             this.clearAllTimers();
             this.activeActions = itemId;
             
-            // 디바이스별 기본 지속시간 (단순화)
             const duration = autoHideDuration || (this.isPointerFine ? 6000 : 3000);
             
-            // 애니메이션 가드 (필요시에만)
             if (!this.isPointerFine) {
                 this.actionsAnimating = true;
                 this.actionsAnimUntil = performance.now() + 260;
@@ -167,7 +207,7 @@ const app = createApp({
 
         releaseActionsKeepAlive() {
             this.actionsKeepAlive = false;
-            this.scheduleHideActions(1500); // 통합된 지연시간
+            this.scheduleHideActions(1500);
         },
 
         guardAction(fn) {
@@ -177,9 +217,9 @@ const app = createApp({
             try { fn && fn(); } catch(e) {}
         },
 
+        // 포인터 이벤트 핸들러
         onCardPointerEnter(e, itemId) {
             if (this.uiLocked) return;
-            // 모든 포인터 타입에서 호버 동작 (데스크탑/터치 구분 없음)
             if (e.pointerType === 'mouse' && this.isPointerFine) {
                 this.showActions(itemId, 6000);
             }
@@ -198,14 +238,12 @@ const app = createApp({
         },
 
         onItemPointerDown(e, id) {
-            // 포인터 캡처
             try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch(_) {}
             
             this.pointerActive[id] = true;
             this.isPointerPressed = true;
             this.pointerStartTime = performance.now();
             
-            // 좌표 저장 (모든 포인터 타입 통합)
             const clientX = e.clientX;
             const clientY = e.clientY;
             
@@ -218,15 +256,13 @@ const app = createApp({
                 el.classList.add('drag-arming');
             }
             
-            // 통합된 롱프레스 감지 (모든 디바이스)
             if (this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
             this.pointerTimers[id] = setTimeout(() => {
                 if (this.pointerActive[id]) {
-                    // 롱프레스시 항상 액션 표시 (디바이스 구분 없음)
                     this.showActions(id);
                     if (navigator && navigator.vibrate) { navigator.vibrate(12); }
                 }
-            }, 500); // 약간 더 긴 지연시간으로 통합
+            }, 500);
         },
         
         onItemPointerMove(e, item) {
@@ -246,41 +282,28 @@ const app = createApp({
             const dy = clientY - (state.sy || 0);
             const el = this.getCardElById(id);
 
-            // 드래그 감지시 롱프레스 취소 (통합)
             if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
                 if (this.pointerTimers[id]) clearTimeout(this.pointerTimers[id]);
             }
 
-            // 수평 스와이프 감지 (모든 디바이스 동일)
             const hori = Math.abs(dx) >= 12 && Math.abs(dx) > Math.abs(dy) * 1.5;
             if (el) {
                 const tx = Math.max(-72, Math.min(dx, 72));
-                // Batch DOM writes for smoother pointer moves
-
                 const _id = id;
 
                 if (!this._rafMap.has(_id)) {
-
                     this._rafMap.set(_id, requestAnimationFrame(() => {
-
                         try {
-
                             const _el = this.getCardElById(_id);
-
                             if (_el) _el.style.transform = `translateX(${tx}px)`;
-
                         } finally {
-
                             this._rafMap.delete(_id);
-
                         }
-
                     }));
-
                 }
             }
 
-            // 체크 토글 (통합된 로직)
+            // 체크 토글
             if (hori && dx > 42 && !state.toggled && !item.completed) {
                 this.toggleComplete(item);
                 state.toggled = true;
@@ -297,7 +320,7 @@ const app = createApp({
         },
 
         onItemPointerUp(e, id) {
-            // cancel any pending rAF updates for this id
+            // RAF 취소
             try {
                 const handle = this._rafMap && this._rafMap.get(id);
                 if (handle) {
@@ -313,7 +336,7 @@ const app = createApp({
                 e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId);
             } catch(_) {}            
 
-            // 정리 작업 (통합)
+            // 정리 작업
             try {
                 const el = this.getCardElById(id);
                 if (el) {
@@ -329,7 +352,6 @@ const app = createApp({
             }
         },
 
-        // --- 액션 패널 이벤트 (단순화됨) ---
         onActionsEnter() {
             this.keepActionsAlive();
         },
@@ -338,7 +360,7 @@ const app = createApp({
             this.releaseActionsKeepAlive();
         },
 
-        // --- 기존 메서드들 (변경 없음) ---
+        // 모달 관련 메서드
         showAddInput() {
             if (this.uiLocked) return;
             this.modalMode = 'add';
@@ -393,6 +415,18 @@ const app = createApp({
             this.cancelModal();
         },
 
+        closeAllModals() {
+            this.showModal = false;
+            this.showTrashModal = false;
+            this.showDescriptionModal = false;
+            this.showPresetModal = false;
+            this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+            this.selectedItem = null;
+            this.selectedPresetSlot = null;
+        },
+
+        // 아이템 관련 메서드
         clickTitle(item, e) {
             return;
         },
@@ -400,83 +434,6 @@ const app = createApp({
         toggleComplete(item) {
             item.completed = !item.completed;
             try { this.saveToStorage && this.saveToStorage(); } catch (e) {}
-        },
-
-        toggleTheme() {
-            this.isDarkMode = !this.isDarkMode;
-            this._themeAutoFollow = false;
-            try { localStorage.setItem(STORAGE_KEY_THEME, this.isDarkMode ? 'dark' : 'light') } catch(_) {}
-            this.applyTheme();
-            this.showMenu = false;
-            try { this.saveSettings(); } catch(_) {}
-
-        },
-
-        applyTheme() {
-            if (this.isDarkMode) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-            } else {
-                document.documentElement.removeAttribute('data-theme');
-            }
-        },
-        
-        initializeTheme() {
-            const THEME_KEY = STORAGE_KEY_THEME;try {
-                let saved = localStorage.getItem(THEME_KEY);
-if (saved === 'dark' || saved === 'light') {
-                    this.isDarkMode = (saved === 'dark');
-                } else {
-                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    this.isDarkMode = !!prefersDark;
-                }
-            } catch (e) {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                this.isDarkMode = !!prefersDark;
-            }
-            this.applyTheme();
-
-            if (window.matchMedia) {
-                const mq = window.matchMedia('(prefers-color-scheme: dark)');
-                const handler = (e) => {
-                    if (this._themeAutoFollow !== false) {
-                        this.isDarkMode = e.matches;
-                        try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
-                        this.applyTheme();
-                    }
-                };
-                try {
-                    mq.addEventListener('change', handler);
-                } catch (err) {
-                    mq.addListener(handler);
-                }
-                // Store cleanup to prevent leaks (simple and safe)
-                this._mqCleanup = () => {
-                    try { mq.removeEventListener('change', handler); }
-                    catch { mq.removeListener(handler); }
-                };
-            }
-        },
-
-        toggleUILock() {
-            this.uiLocked = !this.uiLocked;
-            if (this.uiLocked && this.sortableInstance) {
-                this.sortableInstance.option('disabled', true);
-            } else if (this.sortableInstance) {
-                this.sortableInstance.option('disabled', false);
-            }
-            this.showMenu = false;
-            try { this.saveSettings(); } catch(_) {}
-
-        },
-
-        showDescriptionPopup(item) {
-            this.selectedItem = item;
-            this.showDescriptionModal = true;
-        },
-
-        closeDescriptionPopup() {
-            this.showDescriptionModal = false;
-            this.selectedItem = null;
         },
 
         removeItem(id) {
@@ -516,6 +473,119 @@ if (saved === 'dark' || saved === 'light') {
             }
         },
 
+        resetAll() {
+            this.items.forEach(item => {
+                item.completed = false;
+            });
+            this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+        },
+
+        // 테마 관련 메서드
+        toggleTheme() {
+            this.isDarkMode = !this.isDarkMode;
+            this._themeAutoFollow = false;
+            try { localStorage.setItem(STORAGE_KEY_THEME, this.isDarkMode ? 'dark' : 'light') } catch(_) {}
+            this.applyTheme();
+            this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+        },
+
+        applyTheme() {
+            if (this.isDarkMode) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
+        },
+        
+        initializeTheme() {
+            const THEME_KEY = STORAGE_KEY_THEME;
+            try {
+                let saved = localStorage.getItem(THEME_KEY);
+                if (saved === 'dark' || saved === 'light') {
+                    this.isDarkMode = (saved === 'dark');
+                } else {
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    this.isDarkMode = !!prefersDark;
+                }
+            } catch (e) {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.isDarkMode = !!prefersDark;
+            }
+            this.applyTheme();
+
+            if (window.matchMedia) {
+                const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                const handler = (e) => {
+                    if (this._themeAutoFollow !== false) {
+                        this.isDarkMode = e.matches;
+                        try { localStorage.setItem(THEME_KEY, this.isDarkMode ? 'dark' : 'light'); } catch(_) {}
+                        this.applyTheme();
+                    }
+                };
+                try {
+                    mq.addEventListener('change', handler);
+                } catch (err) {
+                    mq.addListener(handler);
+                }
+                this._mqCleanup = () => {
+                    try { mq.removeEventListener('change', handler); }
+                    catch { mq.removeListener(handler); }
+                };
+            }
+        },
+
+        // UI 잠금 관련
+        toggleUILock() {
+            this.uiLocked = !this.uiLocked;
+            if (this.uiLocked && this.sortableInstance) {
+                this.sortableInstance.option('disabled', true);
+            } else if (this.sortableInstance) {
+                this.sortableInstance.option('disabled', false);
+            }
+            this.showMenu = false;
+            try { this.saveSettings(); } catch(_) {}
+        },
+
+        // 제목 편집
+        startEditTitle() {
+            if (this.uiLocked) return;
+            this.editingTitle = true;
+            this.tempTitle = this.appTitle;
+            this.$nextTick(() => {
+                if (this.$refs.titleInput) {
+                    this.$refs.titleInput.focus();
+                    this.$refs.titleInput.select();
+                }
+            });
+        },
+
+        saveTitle() {
+            if (this.tempTitle.trim()) {
+                this.appTitle = this.tempTitle.trim();
+            }
+            this.editingTitle = false;
+            this.tempTitle = '';
+        },
+
+        cancelEditTitle() {
+            this.editingTitle = false;
+            this.tempTitle = '';
+        },
+
+        // 설명 팝업
+        showDescriptionPopup(item) {
+            this.selectedItem = item;
+            this.showDescriptionModal = true;
+        },
+
+        closeDescriptionPopup() {
+            this.showDescriptionModal = false;
+            this.selectedItem = null;
+        },
+
+        // 휴지통 관련
         openTrashModal() {
             this.showTrashModal = true;
         },
@@ -547,18 +617,7 @@ if (saved === 'dark' || saved === 'light') {
             }
         },
 
-        closeAllModals() {
-            this.showModal = false;
-            this.showTrashModal = false;
-            this.showDescriptionModal = false;
-            this.showPresetModal = false;
-            this.showMenu = false;
-            try { this.saveSettings(); } catch(_) {}
-
-            this.selectedItem = null;
-            this.selectedPresetSlot = null;
-        },
-
+        // 메뉴 관련
         toggleMenu() {
             this.showMenu = !this.showMenu;
         },
@@ -571,17 +630,16 @@ if (saved === 'dark' || saved === 'light') {
                 if (menuButton && !menuButton.contains(event.target) && 
                     dropdownMenu && !dropdownMenu.contains(event.target)) {
                     this.showMenu = false;
-            try { this.saveSettings(); } catch(_) {}
-
+                    try { this.saveSettings(); } catch(_) {}
                 }
             }
         },
 
+        // 프리셋 관련
         openPresetModal() {
             this.showPresetModal = true;
             this.showMenu = false;
             try { this.saveSettings(); } catch(_) {}
-
         },
 
         closePresetModal() {
@@ -616,8 +674,8 @@ if (saved === 'dark' || saved === 'light') {
             const slotNumber = this.selectedPresetSlot;
             const preset = this.presets[this.selectedPresetSlot];
             this.appTitle = preset.title;
-            this.items = JSON.parse(JSON.stringify(preset.items || preset.items || []));
-            this.trashItems = JSON.parse(JSON.stringify(preset.trashItems));
+            this.items = JSON.parse(JSON.stringify(preset.items || []));
+            this.trashItems = JSON.parse(JSON.stringify(preset.trashItems || []));
             this.nextId = preset.nextId;
             
             this.closePresetModal();
@@ -636,40 +694,7 @@ if (saved === 'dark' || saved === 'light') {
             }
         },
 
-        resetAll() {
-            this.items.forEach(item => {
-                item.completed = false;
-            });
-            this.showMenu = false;
-            try { this.saveSettings(); } catch(_) {}
-
-        },
-
-        startEditTitle() {
-            if (this.uiLocked) return;
-            this.editingTitle = true;
-            this.tempTitle = this.appTitle;
-            this.$nextTick(() => {
-                if (this.$refs.titleInput) {
-                    this.$refs.titleInput.focus();
-                    this.$refs.titleInput.select();
-                }
-            });
-        },
-
-        saveTitle() {
-            if (this.tempTitle.trim()) {
-                this.appTitle = this.tempTitle.trim();
-            }
-            this.editingTitle = false;
-            this.tempTitle = '';
-        },
-
-        cancelEditTitle() {
-            this.editingTitle = false;
-            this.tempTitle = '';
-        },
-
+        // 스토리지 관련
         saveToStorage() {
             try {
                 const data = {
@@ -684,7 +709,7 @@ if (saved === 'dark' || saved === 'light') {
             } catch (error) {
                 console.warn('현재 상태 저장 실패:', error);
             }
-},
+        },
 
         loadFromStorage() {
             try {
@@ -693,8 +718,7 @@ if (saved === 'dark' || saved === 'light') {
                 const data = JSON.parse(raw);
                 if (data && typeof data === 'object') {
                     this.appTitle = data.appTitle || this.appTitle || '촬영 체크리스트';
-                    this.items = Array.isArray(data.items) ? data.items
-                        : (Array.isArray(data.items) ? data.items : this.items);
+                    this.items = Array.isArray(data.items) ? data.items : this.items;
                     this.trashItems = Array.isArray(data.trashItems) ? data.trashItems : this.trashItems;
                     this.nextId = typeof data.nextId === 'number' ? data.nextId : this.nextId;
                 }
@@ -721,6 +745,7 @@ if (saved === 'dark' || saved === 'light') {
             }
         },
 
+        // 드래그 앤 드롭 초기화
         initSortable() {
             const el = this.$refs.listEl;
             if (el && typeof Sortable !== 'undefined') {
@@ -739,9 +764,7 @@ if (saved === 'dark' || saved === 'light') {
                     chosenClass: "dq-chosen",
                     dragClass: "dq-drag",
 
-
                     onStart: (evt) => {
-
                         document.body.style.overflow = 'hidden';
                         try {
                             const id = evt.item && evt.item.dataset && evt.item.dataset.id;
@@ -751,7 +774,7 @@ if (saved === 'dark' || saved === 'light') {
                                 el.classList.remove('drag-arming');
                             }
                         } catch(_) {}
-                        },
+                    },
                     onEnd: (evt) => {
                         document.body.style.overflow = '';
                         try {
@@ -764,15 +787,15 @@ if (saved === 'dark' || saved === 'light') {
                         } catch(_) {}
                         if (this._lastDropTarget) {
                             try { this._lastDropTarget.classList.remove('drop-target'); } catch(_) {}
-                            }
+                        }
                         const item = this.items.splice(evt.oldIndex, 1)[0];
                         this.items.splice(evt.newIndex, 0, item);
                     },
-
-                    });
+                });
             }
-        },
+        }
     },
+    
     beforeUnmount() {
         if (this.sortableInstance) {
             this.sortableInstance.destroy();
@@ -781,4 +804,5 @@ if (saved === 'dark' || saved === 'light') {
         document.removeEventListener('click', this.handleOutsideClick);
     }
 });
+
 app.mount('#app');

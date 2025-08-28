@@ -1,3 +1,4 @@
+/* 기본 레이아웃 */
 html, body {
     overflow-x: hidden;
 }
@@ -62,6 +63,7 @@ body {
     --font-scale: 1;
 }
 
+/* 다크 테마 */
 [data-theme="dark"] {
     --bg-primary: #1a1a1a;
     --bg-secondary: #2d2d2d;
@@ -81,7 +83,6 @@ body {
     --modal-backdrop: rgba(0,0,0,0.7);
 }
 
-/* 다크테마 적용 */
 [data-theme="dark"] .card {
     background-color: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
@@ -462,8 +463,8 @@ li.dq-ghost > .item-card,
 
 .dropdown-subtitle { 
     color: rgba(0,0,0,0.66); 
-    font-size:0.8em; 
-    margin-left:1em; 
+    font-size: 0.8em; 
+    margin-left: 1em; 
 }
 
 [data-theme="dark"] .dropdown-subtitle { 
