@@ -23,7 +23,7 @@ function getDefaultItems() {
 function getDefaultAppState() {
     return {
         fontScale: 1,
-        appTitle: '촬영 체크리스트',
+        appTitle: '원판 체크리스트',
         editingTitle: false,
         tempTitle: '',
         showModal: false,
