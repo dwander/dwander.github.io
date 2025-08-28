@@ -3,12 +3,58 @@ const STORAGE_KEY_STATE = 'checklist:state';
 const STORAGE_KEY_PRESETS = 'checklist:presets';
 const STORAGE_KEY_THEME = 'checklist:theme';
 
+// 초기 데이터 생성 함수
+function getDefaultItems() {
+    return [
+        { id: 1, text: '신랑신부 포즈컷', description: '', completed: false },
+        { id: 2, text: '신부 포즈컷', description: '', completed: false },
+        { id: 3, text: '신랑신부 정면', description: '', completed: false },
+        { id: 4, text: '양가 혼주', description: '', completed: false },
+        { id: 5, text: '가족 친척 전체', description: '', completed: false },
+        { id: 6, text: '신랑측 직계가족', description: '', completed: false },
+        { id: 7, text: '신부측 직계가족', description: '', completed: false },
+        { id: 8, text: '직장동료 우인', description: '', completed: false },
+        { id: 9, text: '부케 던지기', description: '', completed: false },
+        { id: 10, text: '플래시 컷', description: '', completed: false },
+        { id: 11, text: '주례', description: '', completed: false }
+    ];
+}
+
+function getDefaultAppState() {
+    return {
+        fontScale: 1,
+        appTitle: '촬영 체크리스트',
+        editingTitle: false,
+        tempTitle: '',
+        showModal: false,
+        showTrashModal: false,
+        showDescriptionModal: false,
+        showPresetModal: false,
+        showMenu: false,
+        modalMode: 'add',
+        modalData: { text: '', description: '' },
+        editingItem: null,
+        selectedItem: null,
+        showNumbers: false,
+        uiLocked: false,
+        trashItems: [],
+        presets: {},
+        selectedPresetSlot: null,
+        activeActions: null,
+        actionsKeepAlive: false,
+        items: getDefaultItems(),
+        nextId: 12
+    };
+}
+
 const { createApp } = Vue;
 
 const app = createApp({
     data() { 
+        const defaultState = getDefaultAppState();
         return { 
-            fontScale: 1,  
+            ...defaultState,
+            // 런타임에만 필요한 추가 속성들
             _saveTimer: null, 
             _saveQueued: false, 
             _rafMap: new Map(), 
@@ -16,42 +62,9 @@ const app = createApp({
             actionsAnimUntil: 0,
             pointerTimers: {},
             pointerActive: {},
-            appTitle: '촬영 체크리스트',
-            editingTitle: false,
-            tempTitle: '',
-            showModal: false,
-            showTrashModal: false,
-            showDescriptionModal: false,
-            showPresetModal: false,
-            showMenu: false,
-            modalMode: 'add',
-            modalData: { text: '', description: '' },
-            editingItem: null,
-            selectedItem: null,
-            showNumbers: false,
-            isDarkMode: false,
-            uiLocked: false,
-            trashItems: [],
-            presets: {},
-            selectedPresetSlot: null,
             sortableInstance: null,
-            activeActions: null,
             actionsTimeout: null,
-            actionsKeepAlive: false,
-            items: [
-                { id: 1, text: '신랑신부 포즈컷', description: '', completed: false },
-                { id: 2, text: '신부 포즈컷', description: '', completed: false },
-                { id: 3, text: '신랑신부 정면', description: '', completed: false },
-                { id: 4, text: '양가 혼주', description: '', completed: false },
-                { id: 5, text: '가족 친척 전체', description: '', completed: false },
-                { id: 6, text: '신랑측 직계가족', description: '', completed: false },
-                { id: 7, text: '신부측 직계가족', description: '', completed: false },
-                { id: 8, text: '직장동료 우인', description: '', completed: false },
-                { id: 9, text: '부케 던지기', description: '', completed: false },
-                { id: 10, text: '플래시 컷', description: '', completed: false },
-                { id: 11, text: '주례', description: '', completed: false }
-            ],
-            nextId: 12,
+            isDarkMode: false,
             pointers: {},
             isPointerPressed: false,
             pointerStartTime: 0
@@ -479,6 +492,41 @@ const app = createApp({
             });
             this.showMenu = false;
             try { this.saveSettings(); } catch(_) {}
+        },
+
+        resetAllData() {
+            if (confirm('모든 데이터(체크리스트, 휴지통, 프리셋, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                try {
+                    // 로컬 스토리지 완전 초기화
+                    localStorage.removeItem(STORAGE_KEY_SETTINGS);
+                    localStorage.removeItem(STORAGE_KEY_STATE);
+                    localStorage.removeItem(STORAGE_KEY_PRESETS);
+                    localStorage.removeItem(STORAGE_KEY_THEME);
+                    
+                    // 앱 상태를 기본값으로 재설정
+                    const defaultState = getDefaultAppState();
+                    Object.keys(defaultState).forEach(key => {
+                        this[key] = defaultState[key];
+                    });
+                    
+                    // 테마는 시스템 기본값으로 복원
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    this.isDarkMode = !!prefersDark;
+                    this.applyTheme();
+                    this.applyFontScale();
+                    
+                    // 드래그앤드롭 잠금 해제
+                    if (this.sortableInstance) {
+                        this.sortableInstance.option('disabled', false);
+                    }
+                    
+                    alert('모든 데이터가 초기화되었습니다.');
+                    
+                } catch (error) {
+                    console.error('데이터 초기화 중 오류:', error);
+                    alert('데이터 초기화 중 오류가 발생했습니다.');
+                }
+            }
         },
 
         // 테마 관련 메서드

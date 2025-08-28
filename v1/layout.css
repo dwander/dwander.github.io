@@ -199,7 +199,7 @@ body {
     cursor: pointer;
     transition: color 0.2s;
     padding: 0.8rem 0.5rem 1rem 0.5rem;
-    font-size: calc(1.5rem * var(--font-scale));
+    font-size: calc(0.95rem * var(--font-scale));
     line-height: calc(1.2 * var(--font-scale));
     color: var(--text-primary);
     width: auto;
